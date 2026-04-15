@@ -157,11 +157,14 @@
   </div>
   <div class="modal-body" id="day-modal-body"></div>
   <div class="modal-footer">
-    <button class="btn-save" onclick="closeDayModal();openAddEvent();">+ Add Event</button>
+    <button class="btn-save" onclick="const d=document.getElementById('day-modal').dataset.date;closeDayModal();openAddEvent(d);">+ Add Event</button>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/data.js"></script>
+<script src="js/db.js"></script>
 <script src="js/weather.js"></script>
 <script src="js/calendar.js"></script>
 <script>

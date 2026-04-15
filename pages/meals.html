@@ -73,7 +73,10 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/supabase-config.js"></script>
 <script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
 <script src="../js/weather.js"></script>
 <script>
 setWeatherBg('partly-cloudy', true);
@@ -96,7 +99,8 @@ function getWeekDates(offset) {
   });
 }
 
-function render() {
+async function render() {
+  const meals = await DB.getMeals();
   const dates = getWeekDates(weekOffset);
   const today = todayStr();
   const startLabel = new Date(dates[0]+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -111,7 +115,7 @@ function render() {
     <div class="meal-grid">`;
 
   dates.forEach(dateStr => {
-    const meal = Store.getMeal(dateStr);
+    const meal = meals[dateStr]||"";
     const d = new Date(dateStr+'T12:00:00');
     const isToday = dateStr === today;
     const dayName = DAY_NAMES_FULL[d.getDay()];
@@ -133,7 +137,7 @@ function render() {
 function openEdit(dateStr, dayName) {
   editDate = dateStr;
   document.getElementById('meal-modal-title').textContent = dayName + "'s Dinner";
-  document.getElementById('meal-input').value = Store.getMeal(dateStr) || '';
+  document.getElementById('meal-input').value = meals[dateStr]||"" || '';
   const ideas = document.getElementById('quick-ideas');
   ideas.innerHTML = MEAL_IDEAS.map(m => `<button onclick="document.getElementById('meal-input').value='${m}'" style="padding:5px 10px;background:rgba(255,255,255,0.08);border-radius:10px;font-size:12px;color:rgba(255,255,255,0.8);border:none;cursor:pointer;font-family:inherit">${m}</button>`).join('');
   document.getElementById('meal-modal').classList.add('open');
@@ -141,11 +145,12 @@ function openEdit(dateStr, dayName) {
   setTimeout(() => document.getElementById('meal-input').focus(), 100);
 }
 
-function saveMeal() {
+async function saveMeal() {
   if (!editDate) return;
-  Store.setMeal(editDate, document.getElementById('meal-input').value.trim());
+  DB.setMeal(editDate, document.getElementById('meal-input').value.trim());
   closeEdit();
-  render();
+  initRealtime(()=>render());
+render();
 }
 
 function closeEdit() {
@@ -158,6 +163,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeEdit();
 });
 
+initRealtime(()=>render());
 render();
 </script>
 </body>

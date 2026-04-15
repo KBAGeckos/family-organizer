@@ -1,13 +1,12 @@
 // ===== APP INIT =====
 
-function init() {
+async function init() {
   const now = new Date();
   document.getElementById('header-date').textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
 
   // Build member filter buttons
   const filter = document.getElementById('member-filter');
   filter.innerHTML = '';
-  // "All" button
   const allBtn = document.createElement('button');
   allBtn.className = 'member-btn active';
   allBtn.dataset.member = 'all';
@@ -32,16 +31,30 @@ function init() {
   });
 
   document.getElementById('ev-date').value = todayStr();
-  renderCalendar();
-  renderTodayAgenda();
-  buildTicker();
-  updateQuickStats();
+
+  // Start realtime — any change on any device triggers a full refresh
+  initRealtime(async () => {
+    await renderCalendar();
+    await renderTodayAgenda();
+    await buildTicker();
+    await updateQuickStats();
+    showSyncStatus(true);
+  });
+
+  // Check connection
+  const db = getSupabase();
+  showSyncStatus(!!db);
+
+  await renderCalendar();
+  await renderTodayAgenda();
+  await buildTicker();
+  await updateQuickStats();
 }
 
 // ===== AGENDA =====
-function renderTodayAgenda() {
+async function renderTodayAgenda() {
   const today = todayStr();
-  const events = Store.getEventsForDate(today).filter(e => activeFilter === 'all' || e.memberId === activeFilter);
+  const events = (await DB.getEventsForDate(today)).filter(e => activeFilter === 'all' || e.memberId === activeFilter);
   const list = document.getElementById('agenda-list');
   if (events.length === 0) {
     list.innerHTML = '<div class="no-events">No events today — enjoy the day! 🎉</div>';
@@ -63,8 +76,8 @@ function renderTodayAgenda() {
 }
 
 // ===== SCROLLING TICKER =====
-function buildTicker() {
-  const upcoming = Store.getUpcomingEvents(60);
+async function buildTicker() {
+  const upcoming = await DB.getUpcomingEvents(60);
   const inner = document.getElementById('ticker-inner');
   if (!inner) return;
   if (upcoming.length === 0) {
@@ -72,6 +85,7 @@ function buildTicker() {
     inner.style.animation = 'none';
     return;
   }
+  inner.style.animation = '';
   const items = upcoming.slice(0, 20).map(ev => {
     const m = getMember(ev.memberId);
     const label = isToday(ev.date) ? 'Today' : isTomorrow(ev.date) ? 'Tomorrow' : formatDateStr(ev.date);
@@ -92,20 +106,25 @@ function isTomorrow(dateStr) {
 }
 
 // ===== QUICK STATS =====
-function updateQuickStats() {
-  const meal = Store.getMeal(todayStr());
+async function updateQuickStats() {
+  const meal = await DB.getMeal(todayStr());
   document.getElementById('tonight-meal').textContent = meal ? 'Tonight: ' + meal : 'Tap to plan';
-  const shopping = Store.getShoppingList().filter(i => !i.checked).length;
+  const shopping = (await DB.getShoppingList()).filter(i => !i.checked).length;
   document.getElementById('shopping-count').textContent = shopping + ' item' + (shopping !== 1 ? 's' : '');
-  const todos = Store.getTodos().filter(t => !t.done).length;
+  const todos = (await DB.getTodos()).filter(t => !t.done).length;
   document.getElementById('todo-count').textContent = todos + ' open';
 }
 
 // ===== ADD EVENT MODAL =====
-function openAddEvent() {
+function openAddEvent(prefillDate) {
+  const dateField = document.getElementById('ev-date');
+  dateField.value = prefillDate || todayStr();
+  document.getElementById('ev-title').value = '';
+  document.getElementById('ev-time').value = '';
+  document.getElementById('ev-note').value = '';
   document.getElementById('add-modal').classList.add('open');
   document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById('ev-title').focus();
+  setTimeout(() => document.getElementById('ev-title').focus(), 60);
 }
 
 function closeModal() {
@@ -114,10 +133,10 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
 }
 
-function saveEvent() {
+async function saveEvent() {
   const title = document.getElementById('ev-title').value.trim();
   if (!title) { document.getElementById('ev-title').focus(); return; }
-  Store.addEvent({
+  await DB.addEvent({
     title,
     date: document.getElementById('ev-date').value,
     time: document.getElementById('ev-time').value,
@@ -128,9 +147,10 @@ function saveEvent() {
   document.getElementById('ev-time').value = '';
   document.getElementById('ev-note').value = '';
   closeModal();
-  renderCalendar();
-  renderTodayAgenda();
-  buildTicker();
+  await renderCalendar();
+  await renderTodayAgenda();
+  await buildTicker();
+  await updateQuickStats();
 }
 
 document.addEventListener('keydown', e => {

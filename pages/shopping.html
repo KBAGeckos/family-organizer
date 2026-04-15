@@ -9,87 +9,65 @@
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="../css/weather.css">
 <style>
-  .category-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: rgba(255,255,255,0.4); padding: 4px 10px 2px; text-transform: uppercase; }
-  .clear-btn { font-size: 12px; color: #f43f5e; padding: 4px 10px; background: rgba(244,63,94,0.12); border-radius: 8px; }
-  .item-delete { font-size: 15px; color: rgba(255,255,255,0.2); padding: 4px 6px; transition: color 0.15s; }
-  .item-delete:hover { color: #f43f5e; }
+.item-delete{font-size:15px;color:rgba(255,255,255,0.2);padding:4px 6px;transition:color .15s;background:none;border:none;cursor:pointer}
+.item-delete:hover{color:#f43f5e}
 </style>
 </head>
 <body class="weather-partly-cloudy">
 <div id="weather-bg" class="weather-bg"><div class="weather-layer" id="weather-layer"></div><div class="weather-overlay"></div></div>
-
 <header class="page-header">
   <a href="../index.html" class="back-btn">‹</a>
   <div class="page-title">🛒 Shopping List</div>
 </header>
-
 <div class="list-section" id="list-section"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/supabase-config.js"></script>
 <script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
 <script src="../js/weather.js"></script>
 <script>
 setWeatherBg('partly-cloudy', true);
 
-function render() {
-  const items = Store.getShoppingList();
-  const unchecked = items.filter(i => !i.checked);
-  const checked = items.filter(i => i.checked);
+async function render() {
+  const items = await DB.getShoppingList();
+  const uc = items.filter(i => !i.checked);
+  const ck = items.filter(i => i.checked);
   const section = document.getElementById('list-section');
-
-  let html = `<div class="list-card">
+  const iHtml = i => `<div class="list-item ${i.checked ? 'checked' : ''}" onclick="tog('${i.id}')">
+    <div class="list-check">${i.checked ? '✓' : ''}</div>
+    <div class="list-item-text">${i.text}</div>
+    <button class="item-delete" onclick="event.stopPropagation();del('${i.id}')">✕</button>
+  </div>`;
+  section.innerHTML = `<div class="list-card">
     <div class="list-card-header">
-      <div class="list-card-title">Items (${unchecked.length} remaining)</div>
-      ${checked.length > 0 ? `<button class="clear-btn" onclick="clearChecked()">Clear done</button>` : ''}
+      <div class="list-card-title">Items (${uc.length} remaining)</div>
+      ${ck.length > 0 ? `<button onclick="clearDone()" style="font-size:12px;color:#f43f5e;padding:3px 9px;background:rgba(244,63,94,0.12);border-radius:7px;border:none;cursor:pointer;font-weight:700">Clear done</button>` : ''}
     </div>
-    <div class="list-items" id="items-container">`;
-
-  if (unchecked.length === 0 && checked.length === 0) {
-    html += '<div class="no-events" style="padding:20px">No items yet — add some below!</div>';
-  }
-
-  unchecked.forEach(item => {
-    html += itemHtml(item);
-  });
-
-  if (checked.length > 0) {
-    html += `<div class="category-label" style="margin-top:8px">Checked off</div>`;
-    checked.forEach(item => { html += itemHtml(item); });
-  }
-
-  html += `</div>
+    <div class="list-items">
+      ${uc.length === 0 && ck.length === 0 ? '<div class="no-events" style="padding:20px">No items yet!</div>' : ''}
+      ${uc.map(iHtml).join('')}
+      ${ck.length ? `<div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:rgba(255,255,255,0.3);padding:6px 10px 2px;text-transform:uppercase">Done</div>${ck.map(iHtml).join('')}` : ''}
+    </div>
     <div class="add-item-row">
-      <input type="text" id="new-item" class="add-item-input" placeholder="Add item..." onkeydown="if(event.key==='Enter')addItem()">
-      <button class="add-item-btn" onclick="addItem()">+</button>
+      <input type="text" id="new-item" class="add-item-input" placeholder="Add item..." onkeydown="if(event.key==='Enter')add()">
+      <button class="add-item-btn" onclick="add()">+</button>
     </div>
   </div>`;
-
-  section.innerHTML = html;
 }
 
-function itemHtml(item) {
-  return `<div class="list-item ${item.checked ? 'checked' : ''}" onclick="toggle('${item.id}')">
-    <div class="list-check">${item.checked ? '✓' : ''}</div>
-    <div class="list-item-text">${item.text}</div>
-    <button class="item-delete" onclick="event.stopPropagation();del('${item.id}')">✕</button>
-  </div>`;
-}
-
-function addItem() {
+async function add() {
   const inp = document.getElementById('new-item');
   const text = inp.value.trim();
   if (!text) return;
-  Store.addShoppingItem(text);
+  await DB.addShoppingItem(text);
   inp.value = '';
-  render();
+  await render();
 }
+async function tog(id) { await DB.toggleShoppingItem(id); await render(); }
+async function del(id) { await DB.deleteShoppingItem(id); await render(); }
+async function clearDone() { await DB.clearCheckedShopping(); await render(); }
 
-function toggle(id) { Store.toggleShoppingItem(id); render(); }
-function del(id) { Store.deleteShoppingItem(id); render(); }
-function clearChecked() {
-  Store.getShoppingList().filter(i => i.checked).forEach(i => Store.deleteShoppingItem(i.id));
-  render();
-}
-
+initRealtime(() => render());
 render();
 </script>
 </body>
