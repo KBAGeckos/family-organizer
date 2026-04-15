@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Budget – FamCal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+<link rel="stylesheet" href="../css/weather.css">
+<style>
+.budget-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 12px 0}
+.summary-tile{background:rgba(10,18,40,0.82);backdrop-filter:blur(14px);border-radius:14px;border:1px solid rgba(255,255,255,0.09);padding:12px 10px;text-align:center}
+.tile-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+.tile-value{font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;color:#fff}
+.tile-value.income{color:#10b981}
+.tile-value.expense{color:#f43f5e}
+.tile-value.balance.pos{color:#10b981}
+.tile-value.balance.neg{color:#f43f5e}
+.month-nav-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0}
+.month-nav-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#fff}
+.budget-section{padding:10px 12px 0}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.section-title{font-size:12px;font-weight:800;color:rgba(255,255,255,0.5);letter-spacing:.06em;text-transform:uppercase}
+.add-tx-btn{font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border:none;cursor:pointer;transition:background .15s}
+.add-tx-btn:hover{background:rgba(255,255,255,0.18)}
+.tx-list{background:rgba(10,18,40,0.82);backdrop-filter:blur(14px);border-radius:14px;border:1px solid rgba(255,255,255,0.09);overflow:hidden}
+.tx-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .12s}
+.tx-row:last-child{border-bottom:none}
+.tx-row:hover{background:rgba(255,255,255,0.04)}
+.tx-cat-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tx-info{flex:1;min-width:0}
+.tx-desc{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-meta{font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px}
+.tx-amount{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;flex-shrink:0}
+.tx-amount.inc{color:#10b981}
+.tx-amount.exp{color:#f43f5e}
+.tx-del{font-size:14px;color:rgba(255,255,255,0.18);background:none;border:none;cursor:pointer;padding:4px 6px;transition:color .15s}
+.tx-del:hover{color:#f43f5e}
+.bar-chart{padding:12px 12px 0}
+.bar-chart-title{font-size:12px;font-weight:800;color:rgba(255,255,255,0.5);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.bar-chart-area{background:rgba(10,18,40,0.82);backdrop-filter:blur(14px);border-radius:14px;border:1px solid rgba(255,255,255,0.09);padding:12px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bar-row:last-child{margin-bottom:0}
+.bar-cat{font-size:11px;color:rgba(255,255,255,0.6);min-width:72px;font-weight:600}
+.bar-track{flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+.bar-amount{font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);min-width:52px;text-align:right}
+.empty-tx{text-align:center;color:rgba(255,255,255,0.3);font-size:12px;padding:18px}
+.cat-select{width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:9px 12px;color:white;font-family:inherit;font-size:13px;outline:none}
+.type-toggle{display:flex;gap:6px;margin-bottom:2px}
+.type-btn{flex:1;padding:8px;border-radius:10px;border:1.5px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.type-btn.on.inc{background:rgba(16,185,129,0.18);border-color:#10b981;color:#10b981}
+.type-btn.on.exp{background:rgba(244,63,94,0.18);border-color:#f43f5e;color:#f43f5e}
+.budget-limit-row{display:flex;align-items:center;gap:8px;padding:10px 12px 4px}
+.budget-limit-label{font-size:12px;color:rgba(255,255,255,0.5);flex:1}
+.limit-input{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:6px 10px;color:white;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;width:100px;outline:none;text-align:right}
+.progress-bar-wrap{padding:0 12px 10px}
+.progress-track{height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;border-radius:5px;transition:width .6s}
+.progress-label{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px}
+</style>
+</head>
+<body class="weather-partly-cloudy">
+<div id="weather-bg" class="weather-bg"><div class="weather-layer" id="weather-layer"></div><div class="weather-overlay"></div></div>
+
+<header class="page-header">
+  <a href="../index.html" class="back-btn">‹</a>
+  <div class="page-title">💰 Budget Tracker</div>
+</header>
+
+<div style="position:relative;z-index:10;overflow-y:auto;padding-bottom:20px" id="main-area"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
+<div class="modal" id="add-modal">
+  <div class="modal-header">
+    <div class="modal-title" id="modal-title-text">Add Transaction</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body" id="modal-body-content"></div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-save" id="modal-save-btn">Save</button>
+  </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/weather.js"></script>
+<script>
+setWeatherBg('partly-cloudy', true);
+
+const EXPENSE_CATS = [
+  {id:'groceries', label:'Groceries', icon:'🛒', color:'#10b981'},
+  {id:'dining',    label:'Dining',    icon:'🍕', color:'#f97316'},
+  {id:'gas',       label:'Gas',       icon:'⛽', color:'#eab308'},
+  {id:'utilities', label:'Utilities', icon:'💡', color:'#3b82f6'},
+  {id:'health',    label:'Health',    icon:'💊', color:'#ec4899'},
+  {id:'kids',      label:'Kids',      icon:'🎒', color:'#8b5cf6'},
+  {id:'clothing',  label:'Clothing',  icon:'👕', color:'#06b6d4'},
+  {id:'fun',       label:'Fun',       icon:'🎉', color:'#a855f7'},
+  {id:'home',      label:'Home',      icon:'🏠', color:'#64748b'},
+  {id:'other',     label:'Other',     icon:'📦', color:'#6b7280'},
+];
+const INCOME_CATS = [
+  {id:'salary',    label:'Salary',    icon:'💼', color:'#10b981'},
+  {id:'freelance', label:'Freelance', icon:'💻', color:'#3b82f6'},
+  {id:'other_inc', label:'Other',     icon:'💵', color:'#6b7280'},
+];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let viewMonth = new Date().getMonth();
+let viewYear = new Date().getFullYear();
+
+function getTx() { try { return JSON.parse(localStorage.getItem('fc_budget_tx') || '[]'); } catch { return []; } }
+function saveTx(t) { localStorage.setItem('fc_budget_tx', JSON.stringify(t)); }
+function getLimit() { return parseFloat(localStorage.getItem('fc_budget_limit') || '0'); }
+function saveLimit(v) { localStorage.setItem('fc_budget_limit', v); }
+
+function monthTx() {
+  return getTx().filter(t => {
+    const d = new Date(t.date + 'T12:00:00');
+    return d.getMonth() === viewMonth && d.getFullYear() === viewYear;
+  });
+}
+
+function fmt(n) { return '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function getCat(id, type) {
+  const list = type === 'income' ? INCOME_CATS : EXPENSE_CATS;
+  return list.find(c => c.id === id) || {label:'Other', icon:'📦', color:'#6b7280'};
+}
+
+function render() {
+  const txs = monthTx();
+  const income = txs.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+  const expenses = txs.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+  const balance = income - expenses;
+  const limit = getLimit();
+
+  const area = document.getElementById('main-area');
+  area.innerHTML = '';
+
+  // Month nav
+  const nav = document.createElement('div');
+  nav.className = 'month-nav-row';
+  nav.innerHTML = `
+    <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+    <div class="month-nav-title">${MONTHS[viewMonth]} ${viewYear}</div>
+    <button class="cal-nav" onclick="changeMonth(1)">›</button>`;
+  area.appendChild(nav);
+
+  // Summary tiles
+  const tiles = document.createElement('div');
+  tiles.className = 'budget-summary';
+  tiles.innerHTML = `
+    <div class="summary-tile"><div class="tile-label">Income</div><div class="tile-value income">${fmt(income)}</div></div>
+    <div class="summary-tile"><div class="tile-label">Spent</div><div class="tile-value expense">${fmt(expenses)}</div></div>
+    <div class="summary-tile"><div class="tile-label">Balance</div><div class="tile-value balance ${balance >= 0 ? 'pos' : 'neg'}">${fmt(balance)}</div></div>`;
+  area.appendChild(tiles);
+
+  // Budget limit + progress
+  if (limit > 0 || true) {
+    const limitWrap = document.createElement('div');
+    limitWrap.innerHTML = `
+      <div class="budget-limit-row">
+        <div class="budget-limit-label">Monthly spending limit:</div>
+        <input class="limit-input" type="number" id="limit-input" placeholder="$0" value="${limit > 0 ? limit : ''}" onchange="updateLimit(this.value)">
+      </div>`;
+    area.appendChild(limitWrap);
+
+    if (limit > 0) {
+      const pct = Math.min(expenses / limit * 100, 100);
+      const over = expenses > limit;
+      const prog = document.createElement('div');
+      prog.className = 'progress-bar-wrap';
+      prog.innerHTML = `
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${pct}%;background:${over ? '#f43f5e' : pct > 80 ? '#f97316' : '#10b981'}"></div>
+        </div>
+        <div class="progress-label">
+          <span>${fmt(expenses)} spent</span>
+          <span>${over ? fmt(expenses - limit) + ' over' : fmt(limit - expenses) + ' left'}</span>
+        </div>`;
+      area.appendChild(prog);
+    }
+  }
+
+  // Spending by category chart
+  const expTxs = txs.filter(t => t.type === 'expense');
+  if (expTxs.length > 0) {
+    const bycat = {};
+    expTxs.forEach(t => { bycat[t.category] = (bycat[t.category] || 0) + t.amount; });
+    const sorted = Object.entries(bycat).sort((a,b) => b[1]-a[1]).slice(0, 6);
+    const maxVal = sorted[0][1];
+
+    const chartDiv = document.createElement('div');
+    chartDiv.className = 'bar-chart';
+    chartDiv.innerHTML = `<div class="bar-chart-title">Spending by category</div>`;
+    const chartArea = document.createElement('div');
+    chartArea.className = 'bar-chart-area';
+    sorted.forEach(([catId, total]) => {
+      const cat = getCat(catId, 'expense');
+      const pct = (total / maxVal) * 100;
+      const barRow = document.createElement('div');
+      barRow.className = 'bar-row';
+      barRow.innerHTML = `
+        <div class="bar-cat">${cat.icon} ${cat.label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cat.color}"></div></div>
+        <div class="bar-amount">${fmt(total)}</div>`;
+      chartArea.appendChild(barRow);
+    });
+    chartDiv.appendChild(chartArea);
+    area.appendChild(chartDiv);
+  }
+
+  // Transactions - Expenses
+  const expSection = document.createElement('div');
+  expSection.className = 'budget-section';
+  expSection.innerHTML = `<div class="section-hdr">
+    <div class="section-title">Expenses</div>
+    <button class="add-tx-btn" onclick="openAddTx('expense')">+ Add</button>
+  </div>`;
+  const expList = document.createElement('div');
+  expList.className = 'tx-list';
+  const expItems = txs.filter(t => t.type === 'expense').sort((a,b) => b.date.localeCompare(a.date));
+  if (!expItems.length) {
+    expList.innerHTML = '<div class="empty-tx">No expenses yet this month</div>';
+  } else {
+    expItems.forEach(t => expList.appendChild(makeTxRow(t)));
+  }
+  expSection.appendChild(expList);
+  area.appendChild(expSection);
+
+  // Transactions - Income
+  const incSection = document.createElement('div');
+  incSection.className = 'budget-section';
+  incSection.style.paddingBottom = '12px';
+  incSection.innerHTML = `<div class="section-hdr">
+    <div class="section-title">Income</div>
+    <button class="add-tx-btn" onclick="openAddTx('income')">+ Add</button>
+  </div>`;
+  const incList = document.createElement('div');
+  incList.className = 'tx-list';
+  const incItems = txs.filter(t => t.type === 'income').sort((a,b) => b.date.localeCompare(a.date));
+  if (!incItems.length) {
+    incList.innerHTML = '<div class="empty-tx">No income logged this month</div>';
+  } else {
+    incItems.forEach(t => incList.appendChild(makeTxRow(t)));
+  }
+  incSection.appendChild(incList);
+  area.appendChild(incSection);
+}
+
+function makeTxRow(t) {
+  const cat = getCat(t.category, t.type);
+  const row = document.createElement('div');
+  row.className = 'tx-row';
+  const d = new Date(t.date + 'T12:00:00');
+  const dateLabel = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  const m = getMember(t.memberId);
+  row.innerHTML = `
+    <div class="tx-cat-icon" style="background:${cat.color}22">${cat.icon}</div>
+    <div class="tx-info">
+      <div class="tx-desc">${t.desc}</div>
+      <div class="tx-meta">${cat.label} · ${dateLabel} · ${m.name}</div>
+    </div>
+    <div class="tx-amount ${t.type === 'income' ? 'inc' : 'exp'}">${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}</div>
+    <button class="tx-del" onclick="deleteTx('${t.id}')">✕</button>`;
+  return row;
+}
+
+let addingType = 'expense';
+function openAddTx(type) {
+  addingType = type;
+  const cats = type === 'expense' ? EXPENSE_CATS : INCOME_CATS;
+  const catOptions = cats.map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`).join('');
+  const memberOptions = FAMILY_MEMBERS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  const today = new Date().toISOString().split('T')[0];
+
+  document.getElementById('modal-title-text').textContent = type === 'expense' ? '➕ Add Expense' : '💵 Add Income';
+  document.getElementById('modal-body-content').innerHTML = `
+    <input type="text" id="tx-desc" class="form-input" placeholder="${type === 'expense' ? 'What did you spend on?' : 'Income description'}">
+    <div class="form-row">
+      <input type="number" id="tx-amount" class="form-input" placeholder="Amount" step="0.01" min="0" style="flex:1">
+      <input type="date" id="tx-date" class="form-input" value="${today}" style="flex:1">
+    </div>
+    <select id="tx-cat" class="form-input">${catOptions}</select>
+    <select id="tx-member" class="form-input">${memberOptions}</select>`;
+  document.getElementById('modal-save-btn').onclick = saveTxItem;
+  document.getElementById('add-modal').classList.add('open');
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('tx-desc').focus(), 60);
+}
+
+function saveTxItem() {
+  const desc = document.getElementById('tx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  if (!desc || isNaN(amount) || amount <= 0) return;
+  const txs = getTx();
+  txs.push({
+    id: Date.now().toString(),
+    type: addingType,
+    desc,
+    amount,
+    date: document.getElementById('tx-date').value,
+    category: document.getElementById('tx-cat').value,
+    memberId: document.getElementById('tx-member').value,
+  });
+  saveTx(txs);
+  closeModal();
+  render();
+}
+
+function deleteTx(id) { saveTx(getTx().filter(t => t.id !== id)); render(); }
+function updateLimit(v) { saveLimit(parseFloat(v) || 0); render(); }
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  render();
+}
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+render();
+</script>
+</body>
+</html>

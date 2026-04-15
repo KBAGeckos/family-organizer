@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Birthdays – FamCal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+<link rel="stylesheet" href="../css/weather.css">
+<style>
+.bday-card{background:rgba(10,18,40,0.82);backdrop-filter:blur(14px);border-radius:18px;border:1px solid rgba(255,255,255,0.09);overflow:hidden;margin-bottom:10px}
+.bday-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.bday-header-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#fff}
+.bday-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;transition:background .12s}
+.bday-row:last-child{border-bottom:none}
+.bday-row:hover{background:rgba(255,255,255,0.04)}
+.bday-row.today-bday{background:rgba(99,102,241,0.13);border-left:3px solid #6366f1}
+.bday-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;flex-shrink:0;overflow:hidden;position:relative}
+.bday-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.bday-info{flex:1;min-width:0}
+.bday-name{font-weight:800;font-size:14px;color:#fff}
+.bday-date{font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px}
+.bday-right{text-align:right;flex-shrink:0}
+.bday-countdown{font-family:'Nunito',sans-serif;font-weight:800;font-size:18px;color:#fff}
+.bday-countdown.soon{color:#f97316}
+.bday-countdown.today{color:#6366f1;font-size:22px}
+.bday-countdown-label{font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px}
+.age-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);margin-top:3px}
+.edit-section{padding:14px}
+.form-group{margin-bottom:10px}
+.form-label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase}
+.confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999}
+.anniv-section{margin-top:10px}
+.next-up-card{background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.next-up-icon{font-size:28px;flex-shrink:0}
+.next-up-info{}
+.next-up-label{font-size:11px;font-weight:700;color:#a5b4fc;letter-spacing:.05em;text-transform:uppercase}
+.next-up-name{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;color:#fff;margin-top:2px}
+.next-up-sub{font-size:12px;color:rgba(255,255,255,0.5);margin-top:2px}
+.anniv-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.anniv-row:last-child{border-bottom:none}
+.anniv-icon{font-size:22px;flex-shrink:0}
+.anniv-info{flex:1}
+.anniv-name{font-size:13px;font-weight:700;color:#fff}
+.anniv-date{font-size:11px;color:rgba(255,255,255,0.45);margin-top:1px}
+.anniv-days{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#fff;text-align:right;flex-shrink:0}
+.anniv-days-label{font-size:9px;color:rgba(255,255,255,0.4);text-align:right}
+.edit-bday-btn{font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);border:none;cursor:pointer;transition:background .15s}
+.edit-bday-btn:hover{background:rgba(255,255,255,0.15)}
+</style>
+</head>
+<body class="weather-partly-cloudy">
+<canvas class="confetti-canvas" id="confetti-canvas"></canvas>
+<div id="weather-bg" class="weather-bg"><div class="weather-layer" id="weather-layer"></div><div class="weather-overlay"></div></div>
+
+<header class="page-header">
+  <a href="../index.html" class="back-btn">‹</a>
+  <div class="page-title">🎂 Birthdays & Anniversaries</div>
+</header>
+
+<div class="list-section" id="main-section"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
+<div class="modal" id="edit-modal">
+  <div class="modal-header">
+    <div class="modal-title" id="modal-title-text">Edit Birthday</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body" id="modal-body-content"></div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-save" id="modal-save-btn">Save</button>
+  </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/weather.js"></script>
+<script>
+setWeatherBg('partly-cloudy', true);
+
+// Birthdays stored as { memberId: "MM-DD-YYYY" }
+// Anniversaries stored as array of { id, label, date "MM-DD-YYYY" }
+
+function getBirthdays() {
+  try { return JSON.parse(localStorage.getItem('fc_birthdays') || '{}'); } catch { return {}; }
+}
+function saveBirthdays(b) { localStorage.setItem('fc_birthdays', JSON.stringify(b)); }
+function getAnniversaries() {
+  try { return JSON.parse(localStorage.getItem('fc_anniversaries') || '[]'); } catch { return []; }
+}
+function saveAnniversaries(a) { localStorage.setItem('fc_anniversaries', JSON.stringify(a)); }
+
+function daysUntil(monthDay) {
+  // monthDay = "MM-DD"
+  const [m, d] = monthDay.split('-').map(Number);
+  const now = new Date();
+  const next = new Date(now.getFullYear(), m - 1, d);
+  if (next < now) next.setFullYear(now.getFullYear() + 1);
+  const diff = Math.ceil((next - now) / 86400000);
+  return diff;
+}
+
+function getAge(fullDate) {
+  if (!fullDate) return null;
+  const [m, d, y] = fullDate.split('-').map(Number);
+  if (!y) return null;
+  const now = new Date();
+  let age = now.getFullYear() - y;
+  const hasBirthdayPassed = (now.getMonth() + 1 > m) || (now.getMonth() + 1 === m && now.getDate() >= d);
+  if (!hasBirthdayPassed) age--;
+  return age;
+}
+
+function isToday(monthDay) {
+  const now = new Date();
+  const [m, d] = monthDay.split('-').map(Number);
+  return now.getMonth() + 1 === m && now.getDate() === d;
+}
+
+function formatMonthDay(monthDay) {
+  if (!monthDay) return '—';
+  const [m, d] = monthDay.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[m-1] + ' ' + d;
+}
+
+function render() {
+  const birthdays = getBirthdays();
+  const anniversaries = getAnniversaries();
+  const section = document.getElementById('main-section');
+  section.innerHTML = '';
+
+  // ---- UPCOMING banner ----
+  const allEvents = [];
+  FAMILY_MEMBERS.filter(m => m.id !== 'family').forEach(m => {
+    const bd = birthdays[m.id];
+    if (bd) {
+      const md = bd.substring(0,5); // MM-DD
+      allEvents.push({ name: m.name + "'s Birthday", days: daysUntil(md), icon: '🎂' });
+    }
+  });
+  anniversaries.forEach(a => {
+    const md = a.date.substring(0,5);
+    allEvents.push({ name: a.label, days: daysUntil(md), icon: '💍' });
+  });
+  allEvents.sort((a,b) => a.days - b.days);
+
+  if (allEvents.length > 0) {
+    const next = allEvents[0];
+    const card = document.createElement('div');
+    card.className = 'next-up-card';
+    card.innerHTML = `
+      <div class="next-up-icon">${next.icon}</div>
+      <div class="next-up-info">
+        <div class="next-up-label">Coming up next</div>
+        <div class="next-up-name">${next.name}</div>
+        <div class="next-up-sub">${next.days === 0 ? '🎉 Today!' : next.days === 1 ? 'Tomorrow!' : 'In ' + next.days + ' days'}</div>
+      </div>`;
+    section.appendChild(card);
+  }
+
+  // ---- BIRTHDAYS ----
+  const bdCard = document.createElement('div');
+  bdCard.className = 'bday-card';
+  bdCard.innerHTML = `<div class="bday-header"><div class="bday-header-title">🎂 Birthdays</div></div>`;
+
+  FAMILY_MEMBERS.filter(m => m.id !== 'family').forEach(m => {
+    const bd = birthdays[m.id];
+    const md = bd ? bd.substring(0,5) : null;
+    const today = md && isToday(md);
+    const days = md ? daysUntil(md) : null;
+    const age = bd ? getAge(bd) : null;
+    const photo = AvatarStore.getPhoto(m.id);
+
+    const row = document.createElement('div');
+    row.className = 'bday-row' + (today ? ' today-bday' : '');
+
+    const av = document.createElement('div');
+    av.className = 'bday-av';
+    av.style.background = m.color;
+    if (photo) { const img = document.createElement('img'); img.src = photo; av.appendChild(img); }
+    else { av.textContent = m.initials; }
+
+    let countdownHtml = '';
+    if (today) {
+      countdownHtml = `<div class="bday-countdown today">🎉</div><div class="bday-countdown-label">Today!</div>`;
+    } else if (days !== null) {
+      countdownHtml = `<div class="bday-countdown ${days <= 7 ? 'soon' : ''}">${days}</div><div class="bday-countdown-label">days away</div>`;
+    } else {
+      countdownHtml = `<button class="edit-bday-btn" onclick="openEditBirthday('${m.id}')">Set date</button>`;
+    }
+
+    row.innerHTML = ``;
+    row.appendChild(av);
+    row.innerHTML += `
+      <div class="bday-info">
+        <div class="bday-name">${m.name}</div>
+        <div class="bday-date">${md ? formatMonthDay(md) : 'No date set'}${age !== null ? ` · Turning ${age + (today ? 0 : 1)}` : ''}</div>
+        ${age !== null ? `<span class="age-badge">Age ${age}</span>` : ''}
+      </div>
+      <div class="bday-right">${countdownHtml}</div>`;
+    row.onclick = () => openEditBirthday(m.id);
+    bdCard.appendChild(row);
+
+    if (today) launchConfetti(m.color);
+  });
+
+  section.appendChild(bdCard);
+
+  // ---- ANNIVERSARIES ----
+  const anCard = document.createElement('div');
+  anCard.className = 'bday-card anniv-section';
+  anCard.innerHTML = `<div class="bday-header">
+    <div class="bday-header-title">💍 Anniversaries</div>
+    <button class="edit-bday-btn" onclick="openAddAnniversary()">+ Add</button>
+  </div>`;
+
+  if (anniversaries.length === 0) {
+    anCard.innerHTML += `<div class="no-events" style="padding:18px">No anniversaries yet — tap + to add one!</div>`;
+  } else {
+    anniversaries.forEach(a => {
+      const md = a.date.substring(0,5);
+      const today = isToday(md);
+      const days = daysUntil(md);
+      const years = getAge(a.date);
+      const row = document.createElement('div');
+      row.className = 'anniv-row';
+      row.innerHTML = `
+        <div class="anniv-icon">💍</div>
+        <div class="anniv-info">
+          <div class="anniv-name">${a.label}</div>
+          <div class="anniv-date">${formatMonthDay(md)}${years !== null ? ' · Year ' + (years + 1) : ''}</div>
+        </div>
+        <div>
+          <div class="anniv-days ${today ? 'today' : ''}">${today ? '🎉' : days}</div>
+          <div class="anniv-days-label">${today ? 'Today!' : 'days away'}</div>
+        </div>
+        <button onclick="event.stopPropagation();deleteAnniversary('${a.id}')" style="font-size:14px;color:rgba(255,255,255,0.2);background:none;border:none;cursor:pointer;padding:4px 8px;margin-left:4px">✕</button>`;
+      anCard.appendChild(row);
+    });
+  }
+  section.appendChild(anCard);
+}
+
+function openEditBirthday(memberId) {
+  const m = getMember(memberId);
+  const birthdays = getBirthdays();
+  const current = birthdays[memberId] || '';
+  // Convert stored MM-DD-YYYY to input date YYYY-MM-DD
+  let inputVal = '';
+  if (current) {
+    const [mo, d, y] = current.split('-');
+    if (y) inputVal = `${y}-${mo}-${d}`;
+  }
+  document.getElementById('modal-title-text').textContent = `🎂 ${m.name}'s Birthday`;
+  document.getElementById('modal-body-content').innerHTML = `
+    <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-bottom:8px">Enter their birthday to track age and countdown:</div>
+    <input type="date" id="bday-input" class="form-input" value="${inputVal}">
+    ${current ? `<button onclick="clearBirthday('${memberId}')" style="margin-top:8px;font-size:12px;color:#f43f5e;background:rgba(244,63,94,0.12);border:none;border-radius:9px;padding:6px 14px;cursor:pointer;font-weight:700;width:100%">Clear birthday</button>` : ''}`;
+  document.getElementById('modal-save-btn').onclick = () => saveBirthdayDate(memberId);
+  document.getElementById('edit-modal').classList.add('open');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function saveBirthdayDate(memberId) {
+  const val = document.getElementById('bday-input').value;
+  if (!val) return;
+  const [y, m, d] = val.split('-');
+  const birthdays = getBirthdays();
+  birthdays[memberId] = `${m}-${d}-${y}`;
+  saveBirthdays(birthdays);
+  closeModal();
+  render();
+}
+
+function clearBirthday(memberId) {
+  const birthdays = getBirthdays();
+  delete birthdays[memberId];
+  saveBirthdays(birthdays);
+  closeModal();
+  render();
+}
+
+function openAddAnniversary() {
+  document.getElementById('modal-title-text').textContent = '💍 Add Anniversary';
+  document.getElementById('modal-body-content').innerHTML = `
+    <input type="text" id="anniv-label" class="form-input" placeholder="e.g. Eric & April's Wedding">
+    <input type="date" id="anniv-date" class="form-input" style="margin-top:8px">`;
+  document.getElementById('modal-save-btn').onclick = saveAnniversary;
+  document.getElementById('edit-modal').classList.add('open');
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('anniv-label').focus(), 60);
+}
+
+function saveAnniversary() {
+  const label = document.getElementById('anniv-label').value.trim();
+  const val = document.getElementById('anniv-date').value;
+  if (!label || !val) return;
+  const [y, m, d] = val.split('-');
+  const anniversaries = getAnniversaries();
+  anniversaries.push({ id: Date.now().toString(), label, date: `${m}-${d}-${y}` });
+  saveAnniversaries(anniversaries);
+  closeModal();
+  render();
+}
+
+function deleteAnniversary(id) {
+  saveAnniversaries(getAnniversaries().filter(a => a.id !== id));
+  render();
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('open');
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ---- CONFETTI ----
+function launchConfetti(color) {
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const pieces = Array.from({length: 120}, () => ({
+    x: Math.random() * canvas.width,
+    y: -10 - Math.random() * 100,
+    r: 4 + Math.random() * 6,
+    d: 1.5 + Math.random() * 2,
+    color: [color, '#f97316', '#6366f1', '#0d9488', '#f43f5e', '#facc15'][Math.floor(Math.random()*6)],
+    tilt: Math.random() * 10 - 5,
+    tiltAngle: 0,
+    tiltSpeed: 0.1 + Math.random() * 0.1,
+  }));
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.r, p.r * 0.4, p.tilt, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      p.y += p.d;
+      p.x += Math.sin(frame * 0.02 + p.tilt) * 0.8;
+      p.tilt += p.tiltSpeed;
+    });
+    frame++;
+    if (frame < 240) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  draw();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+render();
+</script>
+</body>
+</html>
