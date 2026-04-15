@@ -3,94 +3,174 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Shopping – FamCal</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<title>FamCal – Scott Family</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/main.css">
-<link rel="stylesheet" href="../css/weather.css">
-<style>
-  .category-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: rgba(255,255,255,0.4); padding: 4px 10px 2px; text-transform: uppercase; }
-  .clear-btn { font-size: 12px; color: #f43f5e; padding: 4px 10px; background: rgba(244,63,94,0.12); border-radius: 8px; }
-  .item-delete { font-size: 15px; color: rgba(255,255,255,0.2); padding: 4px 6px; transition: color 0.15s; }
-  .item-delete:hover { color: #f43f5e; }
-</style>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/weather.css">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%236366f1'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle'%3E%F0%9F%8F%A0%3C/text%3E%3C/svg%3E">
 </head>
-<body class="weather-partly-cloudy">
-<div id="weather-bg" class="weather-bg"><div class="weather-layer" id="weather-layer"></div><div class="weather-overlay"></div></div>
+<body class="weather-sunny">
 
-<header class="page-header">
-  <a href="../index.html" class="back-btn">‹</a>
-  <div class="page-title">🛒 Shopping List</div>
+<!-- Animated weather background -->
+<div id="weather-bg" class="weather-bg">
+  <div class="weather-layer" id="weather-layer"></div>
+  <div class="weather-overlay"></div>
+</div>
+
+<!-- Top nav -->
+<header class="app-header">
+  <div class="header-left">
+    <div class="family-badge">🏠</div>
+    <div>
+      <div class="family-name">Scott Family</div>
+      <div class="header-date" id="header-date"></div>
+    </div>
+  </div>
+  <div class="header-right">
+    <a href="pages/profiles.html" class="nav-icon-btn" title="Profiles">👤</a>
+    <a href="pages/birthdays.html" class="nav-icon-btn" title="Birthdays">🎂</a>
+    <a href="pages/budget.html" class="nav-icon-btn" title="Budget">💰</a>
+    <a href="pages/shopping.html" class="nav-icon-btn" title="Shopping">🛒</a>
+    <a href="pages/todos.html" class="nav-icon-btn" title="To-do">✅</a>
+    <a href="pages/meals.html" class="nav-icon-btn" title="Meals">🍽️</a>
+    <button class="nav-icon-btn" onclick="openAddEvent()" title="Add event">＋</button>
+  </div>
 </header>
 
-<div class="list-section" id="list-section"></div>
+<!-- Weather strip -->
+<div class="weather-strip" id="weather-strip">
+  <div class="weather-current" id="weather-current">
+    <div class="w-icon" id="w-icon">⛅</div>
+    <div class="w-temp" id="w-temp">--°</div>
+    <div class="w-desc" id="w-desc">Loading...</div>
+    <div class="w-loc">Moore, SC</div>
+  </div>
+  <div class="forecast-row" id="forecast-row">
+    <!-- filled by JS -->
+  </div>
+</div>
 
-<script src="../js/data.js"></script>
-<script src="../js/weather.js"></script>
+<!-- Main content -->
+<main class="main-content">
+  <!-- Family member filter -->
+  <div class="member-filter" id="member-filter">
+    <button class="member-btn active" data-member="all" onclick="filterMember(this,'all')">
+      <span class="mbtn-avatar" style="background:#6366f1">All</span>
+    </button>
+    <!-- Filled by JS from FAMILY_MEMBERS -->
+  </div>
+
+  <!-- Calendar -->
+  <div class="calendar-card">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-title" id="cal-title">April 2026</div>
+      <button class="cal-nav" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-day-header">Su</div>
+      <div class="cal-day-header">Mo</div>
+      <div class="cal-day-header">Tu</div>
+      <div class="cal-day-header">We</div>
+      <div class="cal-day-header">Th</div>
+      <div class="cal-day-header">Fr</div>
+      <div class="cal-day-header">Sa</div>
+      <div id="cal-days" style="display:contents;"></div>
+    </div>
+  </div>
+
+  <!-- Today's agenda -->
+  <div class="agenda-card" id="agenda-card">
+    <div class="agenda-header">
+      <span class="agenda-title">Today's Schedule</span>
+      <button class="agenda-add" onclick="openAddEvent()">+ Add</button>
+    </div>
+    <div id="agenda-list">
+      <div class="no-events">No events today — enjoy the day! 🎉</div>
+    </div>
+  </div>
+
+  <!-- Quick links row -->
+  <div class="quick-links">
+    <a href="pages/meals.html" class="quick-card meals">
+      <div class="qc-icon">🍽️</div>
+      <div class="qc-label">Meal Plan</div>
+      <div class="qc-sub" id="tonight-meal">Tonight: –</div>
+    </a>
+    <a href="pages/shopping.html" class="quick-card shopping">
+      <div class="qc-icon">🛒</div>
+      <div class="qc-label">Shopping</div>
+      <div class="qc-sub" id="shopping-count">0 items</div>
+    </a>
+    <a href="pages/todos.html" class="quick-card todos">
+      <div class="qc-icon">✅</div>
+      <div class="qc-label">To-Do</div>
+      <div class="qc-sub" id="todo-count">0 open</div>
+    </a>
+  </div>
+</main>
+
+<!-- Scrolling ticker bottom bar -->
+<div class="ticker-bar">
+  <div class="ticker-label">UPCOMING</div>
+  <div class="ticker-track">
+    <div class="ticker-inner" id="ticker-inner">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Add Event Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
+<div class="modal" id="add-modal">
+  <div class="modal-header">
+    <div class="modal-title">New Event</div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="text" id="ev-title" placeholder="What's happening?" class="form-input">
+    <div class="form-row">
+      <input type="date" id="ev-date" class="form-input">
+      <input type="time" id="ev-time" class="form-input">
+    </div>
+    <select id="ev-member" class="form-input">
+      <option value="family">Whole Family</option>
+    </select>
+    <input type="text" id="ev-note" placeholder="Notes (optional)" class="form-input">
+  </div>
+  <div class="modal-footer">
+    <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    <button class="btn-save" onclick="saveEvent()">Save Event</button>
+  </div>
+</div>
+
+<!-- Day detail modal -->
+<div class="modal" id="day-modal" style="max-height:80vh;overflow-y:auto;">
+  <div class="modal-header">
+    <div class="modal-title" id="day-modal-title">Events</div>
+    <button class="modal-close" onclick="closeDayModal()">✕</button>
+  </div>
+  <div class="modal-body" id="day-modal-body"></div>
+  <div class="modal-footer">
+    <button class="btn-save" onclick="closeDayModal();openAddEvent();">+ Add Event</button>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/calendar.js"></script>
 <script>
-setWeatherBg('partly-cloudy', true);
-
-function render() {
-  const items = Store.getShoppingList();
-  const unchecked = items.filter(i => !i.checked);
-  const checked = items.filter(i => i.checked);
-  const section = document.getElementById('list-section');
-
-  let html = `<div class="list-card">
-    <div class="list-card-header">
-      <div class="list-card-title">Items (${unchecked.length} remaining)</div>
-      ${checked.length > 0 ? `<button class="clear-btn" onclick="clearChecked()">Clear done</button>` : ''}
-    </div>
-    <div class="list-items" id="items-container">`;
-
-  if (unchecked.length === 0 && checked.length === 0) {
-    html += '<div class="no-events" style="padding:20px">No items yet — add some below!</div>';
-  }
-
-  unchecked.forEach(item => {
-    html += itemHtml(item);
-  });
-
-  if (checked.length > 0) {
-    html += `<div class="category-label" style="margin-top:8px">Checked off</div>`;
-    checked.forEach(item => { html += itemHtml(item); });
-  }
-
-  html += `</div>
-    <div class="add-item-row">
-      <input type="text" id="new-item" class="add-item-input" placeholder="Add item..." onkeydown="if(event.key==='Enter')addItem()">
-      <button class="add-item-btn" onclick="addItem()">+</button>
-    </div>
-  </div>`;
-
-  section.innerHTML = html;
-}
-
-function itemHtml(item) {
-  return `<div class="list-item ${item.checked ? 'checked' : ''}" onclick="toggle('${item.id}')">
-    <div class="list-check">${item.checked ? '✓' : ''}</div>
-    <div class="list-item-text">${item.text}</div>
-    <button class="item-delete" onclick="event.stopPropagation();del('${item.id}')">✕</button>
-  </div>`;
-}
-
-function addItem() {
-  const inp = document.getElementById('new-item');
-  const text = inp.value.trim();
-  if (!text) return;
-  Store.addShoppingItem(text);
-  inp.value = '';
-  render();
-}
-
-function toggle(id) { Store.toggleShoppingItem(id); render(); }
-function del(id) { Store.deleteShoppingItem(id); render(); }
-function clearChecked() {
-  Store.getShoppingList().filter(i => i.checked).forEach(i => Store.deleteShoppingItem(i.id));
-  render();
-}
-
-render();
+// Apply saved color overrides before init
+(function(){
+  var co = JSON.parse(localStorage.getItem('fc_color_overrides') || '{}');
+  FAMILY_MEMBERS.forEach(function(m){ if(co[m.id]) m.color = co[m.id]; });
+})();
 </script>
+<script src="js/app.js"></script>
 </body>
 </html>

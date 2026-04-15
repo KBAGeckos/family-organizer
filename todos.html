@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>To-Do – FamCal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/main.css">
+<link rel="stylesheet" href="../css/weather.css">
+<style>
+  .todo-member-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px; font-weight: 700;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .member-select-row {
+    display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+    padding: 8px 8px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .member-select-row::-webkit-scrollbar { display: none; }
+  .ms-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,0.08);
+    border: 1.5px solid transparent;
+    color: rgba(255,255,255,0.6);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .ms-btn.active { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); color: white; }
+  .filter-tab-row { display: flex; gap: 6px; padding: 10px 8px 4px; }
+  .filter-tab { padding: 5px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: rgba(255,255,255,0.5); transition: all 0.15s; }
+  .filter-tab.active { background: rgba(255,255,255,0.15); color: white; }
+  .item-delete { font-size: 15px; color: rgba(255,255,255,0.2); padding: 4px 6px; }
+  .item-delete:hover { color: #f43f5e; }
+</style>
+</head>
+<body class="weather-partly-cloudy">
+<div id="weather-bg" class="weather-bg"><div class="weather-layer" id="weather-layer"></div><div class="weather-overlay"></div></div>
+
+<header class="page-header">
+  <a href="../index.html" class="back-btn">‹</a>
+  <div class="page-title">✅ To-Do & Chores</div>
+</header>
+
+<div class="list-section" id="list-section"></div>
+
+<script src="../js/data.js"></script>
+<script src="../js/weather.js"></script>
+<script>
+setWeatherBg('partly-cloudy', true);
+
+let selectedMember = 'all';
+let showDone = false;
+
+function render() {
+  let todos = Store.getTodos();
+  if (selectedMember !== 'all') todos = todos.filter(t => t.memberId === selectedMember);
+  if (!showDone) todos = todos.filter(t => !t.done);
+
+  const open = todos.filter(t => !t.done);
+  const done = todos.filter(t => t.done);
+
+  let html = `<div class="list-card">
+    <div class="member-select-row">
+      <button class="ms-btn ${selectedMember==='all'?'active':''}" onclick="setMember('all')">Everyone</button>
+      ${FAMILY_MEMBERS.filter(m=>m.id!=='family').map(m => `
+        <button class="ms-btn ${selectedMember===m.id?'active':''}" onclick="setMember('${m.id}')" style="${selectedMember===m.id?'border-color:'+m.color:''}">
+          <span style="width:10px;height:10px;border-radius:50%;background:${m.color};display:inline-block;"></span>${m.name}
+        </button>`).join('')}
+    </div>
+    <div class="filter-tab-row">
+      <div class="filter-tab ${!showDone?'active':''}" onclick="showDone=false;render()">Open (${Store.getTodos().filter(t=>!t.done&&(selectedMember==='all'||t.memberId===selectedMember)).length})</div>
+      <div class="filter-tab ${showDone?'active':''}" onclick="showDone=true;render()">Completed</div>
+    </div>
+    <div class="list-items">`;
+
+  const displayTodos = showDone ? done : open;
+  if (displayTodos.length === 0) {
+    html += `<div class="no-events" style="padding:20px">${showDone ? 'Nothing completed yet.' : 'All done! 🎉'}</div>`;
+  } else {
+    displayTodos.forEach(t => {
+      const m = getMember(t.memberId);
+      html += `<div class="list-item ${t.done?'checked':''}" onclick="toggle('${t.id}')">
+        <div class="list-check">${t.done?'✓':''}</div>
+        <div class="list-item-text">${t.text}</div>
+        <div class="todo-member-pill" style="background:${m.color}22;color:${m.color}">${m.initials}</div>
+        <button class="item-delete" onclick="event.stopPropagation();del('${t.id}')">✕</button>
+      </div>`;
+    });
+  }
+
+  const addMemberId = selectedMember === 'all' ? 'family' : selectedMember;
+  html += `</div>
+    <div class="add-item-row">
+      <input type="text" id="new-todo" class="add-item-input" placeholder="Add task..." onkeydown="if(event.key==='Enter')addTodo()">
+      <button class="add-item-btn" onclick="addTodo()">+</button>
+    </div>
+  </div>`;
+
+  document.getElementById('list-section').innerHTML = html;
+}
+
+function setMember(id) { selectedMember = id; render(); }
+function toggle(id) { Store.toggleTodo(id); render(); }
+function del(id) { Store.deleteTodo(id); render(); }
+function addTodo() {
+  const inp = document.getElementById('new-todo');
+  const text = inp.value.trim();
+  if (!text) return;
+  const memberId = selectedMember === 'all' ? 'family' : selectedMember;
+  Store.addTodo(text, memberId);
+  inp.value = '';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

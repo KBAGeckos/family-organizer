@@ -1,543 +1,222 @@
-/* ===== RESET & BASE ===== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
-body {
-  font-family: 'Nunito Sans', sans-serif;
-  background: #0f172a;
-  color: #f1f5f9;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  padding-bottom: 56px;
-}
-a { text-decoration: none; color: inherit; }
-button { font-family: inherit; cursor: pointer; border: none; background: none; }
+// ===== WEATHER ENGINE =====
+// Uses Open-Meteo (free, no API key needed) + Open-Meteo Geocoding
+// Moore, SC 29369 coords: 34.9912, -82.1321
 
-/* ===== WEATHER BG ===== */
-.weather-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  transition: background 2s ease;
-}
-.weather-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 100%);
-}
+const WEATHER_CONFIG = {
+  lat: 34.9912,
+  lon: -82.1321,
+  city: 'Moore, SC'
+};
 
-/* ===== HEADER ===== */
-.app-header {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 10px;
-  background: rgba(0,0,0,0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.header-left { display: flex; align-items: center; gap: 10px; }
-.family-badge {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-}
-.family-name { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 17px; line-height: 1.2; }
-.header-date { font-size: 12px; color: rgba(255,255,255,0.65); }
-.header-right { display: flex; gap: 4px; }
-.nav-icon-btn {
-  width: 38px; height: 38px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.12);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 17px;
-  transition: background 0.15s;
-  color: white;
-  text-decoration: none;
-}
-.nav-icon-btn:hover { background: rgba(255,255,255,0.22); }
+const WMO_CODES = {
+  0: { desc: 'Clear sky', icon: '☀️', type: 'sunny' },
+  1: { desc: 'Mostly clear', icon: '🌤️', type: 'partly-cloudy' },
+  2: { desc: 'Partly cloudy', icon: '⛅', type: 'partly-cloudy' },
+  3: { desc: 'Overcast', icon: '☁️', type: 'cloudy' },
+  45: { desc: 'Foggy', icon: '🌫️', type: 'foggy' },
+  48: { desc: 'Icy fog', icon: '🌫️', type: 'foggy' },
+  51: { desc: 'Light drizzle', icon: '🌦️', type: 'rainy' },
+  53: { desc: 'Drizzle', icon: '🌧️', type: 'rainy' },
+  55: { desc: 'Heavy drizzle', icon: '🌧️', type: 'rainy' },
+  61: { desc: 'Light rain', icon: '🌧️', type: 'rainy' },
+  63: { desc: 'Rain', icon: '🌧️', type: 'rainy' },
+  65: { desc: 'Heavy rain', icon: '🌧️', type: 'rainy' },
+  71: { desc: 'Light snow', icon: '🌨️', type: 'snowy' },
+  73: { desc: 'Snow', icon: '❄️', type: 'snowy' },
+  75: { desc: 'Heavy snow', icon: '❄️', type: 'snowy' },
+  80: { desc: 'Rain showers', icon: '🌦️', type: 'rainy' },
+  81: { desc: 'Rain showers', icon: '🌧️', type: 'rainy' },
+  82: { desc: 'Violent showers', icon: '⛈️', type: 'stormy' },
+  85: { desc: 'Snow showers', icon: '🌨️', type: 'snowy' },
+  95: { desc: 'Thunderstorm', icon: '⛈️', type: 'stormy' },
+  96: { desc: 'Thunderstorm', icon: '⛈️', type: 'stormy' },
+  99: { desc: 'Severe storm', icon: '🌩️', type: 'stormy' },
+};
 
-/* ===== WEATHER STRIP ===== */
-.weather-strip {
-  position: relative; z-index: 10;
-  display: flex; align-items: center; gap: 16px;
-  padding: 12px 16px;
-  background: rgba(0,0,0,0.2);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.weather-strip::-webkit-scrollbar { display: none; }
-.weather-current {
-  display: flex; align-items: center; gap: 8px;
-  flex-shrink: 0;
-  padding-right: 16px;
-  border-right: 1px solid rgba(255,255,255,0.15);
-}
-.w-icon { font-size: 28px; }
-.w-temp { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 24px; }
-.w-desc { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.3; }
-.w-loc { font-size: 11px; color: rgba(255,255,255,0.5); }
-.forecast-row { display: flex; gap: 8px; flex-shrink: 0; }
-.forecast-day {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 6px 10px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 10px;
-  min-width: 52px;
-  font-size: 11px;
-}
-.forecast-day .fd-name { font-weight: 600; color: rgba(255,255,255,0.8); }
-.forecast-day .fd-icon { font-size: 18px; }
-.forecast-day .fd-hi { font-weight: 700; font-size: 13px; }
-.forecast-day .fd-lo { color: rgba(255,255,255,0.5); }
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-/* ===== MAIN CONTENT ===== */
-.main-content {
-  position: relative; z-index: 10;
-  flex: 1;
-  padding: 12px 12px 8px;
-  display: flex; flex-direction: column; gap: 12px;
-  overflow-y: auto;
+async function fetchWeather() {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_CONFIG.lat}&longitude=${WEATHER_CONFIG.lon}&current=temperature_2m,weathercode,is_day&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=5&timezone=America%2FNew_York`;
+    const res = await fetch(url);
+    const data = await res.json();
+    renderWeather(data);
+  } catch(e) {
+    document.getElementById('w-desc').textContent = 'Weather unavailable';
+    setWeatherBg('partly-cloudy', true);
+  }
 }
 
-/* ===== MEMBER FILTER ===== */
-.member-filter {
-  display: flex; gap: 6px;
-  overflow-x: auto; scrollbar-width: none;
-  padding-bottom: 2px;
-}
-.member-filter::-webkit-scrollbar { display: none; }
-.member-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 12px 5px 5px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.12);
-  border: 1.5px solid transparent;
-  font-size: 12px; font-weight: 600;
-  color: rgba(255,255,255,0.75);
-  white-space: nowrap;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.member-btn.active {
-  background: rgba(255,255,255,0.22);
-  border-color: rgba(255,255,255,0.4);
-  color: white;
-}
-.mbtn-avatar {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700;
-  color: white;
-  flex-shrink: 0;
+function renderWeather(data) {
+  const cur = data.current;
+  const daily = data.daily;
+  const code = cur.weathercode;
+  const isDay = cur.is_day === 1;
+  const info = WMO_CODES[code] || { desc: 'Clear', icon: '🌤️', type: 'partly-cloudy' };
+  const weatherType = (!isDay) ? 'night' : info.type;
+
+  // Current conditions
+  document.getElementById('w-icon').textContent = isDay ? info.icon : '🌙';
+  document.getElementById('w-temp').textContent = Math.round(cur.temperature_2m) + '°F';
+  document.getElementById('w-desc').textContent = info.desc;
+
+  // 5-day forecast
+  const forecastRow = document.getElementById('forecast-row');
+  forecastRow.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const dayDate = new Date(daily.time[i] + 'T12:00:00');
+    const dayCode = daily.weathercode[i];
+    const dayInfo = WMO_CODES[dayCode] || { icon: '🌤️' };
+    const isToday = i === 0;
+    const div = document.createElement('div');
+    div.className = 'forecast-day';
+    div.innerHTML = `
+      <div class="fd-name">${isToday ? 'Today' : DAY_NAMES[dayDate.getDay()]}</div>
+      <div class="fd-icon">${dayInfo.icon}</div>
+      <div class="fd-hi">${Math.round(daily.temperature_2m_max[i])}°</div>
+      <div class="fd-lo">${Math.round(daily.temperature_2m_min[i])}°</div>
+    `;
+    forecastRow.appendChild(div);
+  }
+
+  setWeatherBg(weatherType, isDay);
 }
 
-/* ===== CALENDAR CARD ===== */
-.calendar-card {
-  background: rgba(15,23,42,0.75);
-  backdrop-filter: blur(16px);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.1);
-  overflow: hidden;
-}
-.cal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.cal-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px; }
-.cal-nav {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.1);
-  color: white; font-size: 18px;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s;
-}
-.cal-nav:hover { background: rgba(255,255,255,0.2); }
-.cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0;
-}
-.cal-day-header {
-  text-align: center;
-  padding: 8px 2px 6px;
-  font-size: 11px; font-weight: 700;
-  color: rgba(255,255,255,0.45);
-  letter-spacing: 0.05em;
-}
-.cal-cell {
-  aspect-ratio: 1;
-  display: flex; flex-direction: column;
-  align-items: center;
-  padding: 4px 2px 2px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.12s;
-  position: relative;
-  min-height: 44px;
-  overflow: hidden;
-}
-.cal-cell:hover { background: rgba(255,255,255,0.1); }
-.cal-cell.other-month .cal-num { color: rgba(255,255,255,0.2); }
-.cal-cell.today .cal-num {
-  background: #6366f1;
-  color: white;
-  border-radius: 50%;
-  width: 26px; height: 26px;
-  display: flex; align-items: center; justify-content: center;
-}
-.cal-num {
-  font-size: 12px; font-weight: 600;
-  width: 26px; height: 26px;
-  display: flex; align-items: center; justify-content: center;
-}
-.cal-dots {
-  display: flex; gap: 2px; flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 2px;
-  max-width: 28px;
-}
-.cal-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.cal-cell.has-events::after {
-  content: '';
-  display: none;
+function setWeatherBg(type, isDay) {
+  const body = document.body;
+  // Remove all weather classes
+  ['sunny','cloudy','rainy','stormy','snowy','foggy','partly-cloudy','night'].forEach(c => {
+    body.classList.remove('weather-' + c);
+  });
+  body.classList.add('weather-' + type);
+  buildWeatherParticles(type, isDay);
 }
 
-/* ===== AGENDA CARD ===== */
-.agenda-card {
-  background: rgba(15,23,42,0.75);
-  backdrop-filter: blur(16px);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.1);
-  overflow: hidden;
-}
-.agenda-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.agenda-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; }
-.agenda-add {
-  font-size: 12px; font-weight: 600;
-  color: #818cf8;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: rgba(99,102,241,0.15);
-  transition: background 0.15s;
-}
-.agenda-add:hover { background: rgba(99,102,241,0.3); }
-#agenda-list { padding: 8px; }
-.no-events {
-  text-align: center;
-  color: rgba(255,255,255,0.4);
-  font-size: 13px;
-  padding: 16px;
-}
-.agenda-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px;
-  border-radius: 10px;
-  margin-bottom: 4px;
-  background: rgba(255,255,255,0.05);
-  transition: background 0.12s;
-  cursor: pointer;
-}
-.agenda-item:hover { background: rgba(255,255,255,0.1); }
-.agenda-color-bar {
-  width: 4px; height: 36px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-.agenda-item-info { flex: 1; min-width: 0; }
-.agenda-item-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.agenda-item-meta { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
-.agenda-item-avatar {
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700;
-  color: white;
-  flex-shrink: 0;
+function buildWeatherParticles(type, isDay) {
+  const layer = document.getElementById('weather-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+
+  if (type === 'sunny') {
+    const sun = document.createElement('div');
+    sun.className = 'sun';
+    for (let i = 0; i < 8; i++) {
+      const ray = document.createElement('div');
+      ray.className = 'sun-ray';
+      ray.style.transform = `translateY(-50%) rotate(${i * 45}deg)`;
+      ray.style.animationDelay = `${i * 0.2}s`;
+      sun.appendChild(ray);
+    }
+    layer.appendChild(sun);
+  }
+
+  else if (type === 'partly-cloudy') {
+    const sun = document.createElement('div');
+    sun.className = 'sun';
+    sun.style.opacity = '0.7';
+    layer.appendChild(sun);
+    addClouds(layer, 3, 0.4);
+  }
+
+  else if (type === 'cloudy') {
+    addClouds(layer, 6, 0.6);
+  }
+
+  else if (type === 'rainy') {
+    addClouds(layer, 4, 0.5);
+    addRain(layer, 80);
+  }
+
+  else if (type === 'stormy') {
+    addClouds(layer, 5, 0.7);
+    addRain(layer, 120);
+    const bolt = document.createElement('div');
+    bolt.className = 'lightning';
+    bolt.style.height = (80 + Math.random() * 80) + 'px';
+    bolt.style.left = (20 + Math.random() * 60) + '%';
+    bolt.style.animationDelay = (Math.random() * 4) + 's';
+    layer.appendChild(bolt);
+  }
+
+  else if (type === 'snowy') {
+    addClouds(layer, 3, 0.4);
+    addSnow(layer, 40);
+  }
+
+  else if (type === 'foggy') {
+    for (let i = 0; i < 5; i++) {
+      const fog = document.createElement('div');
+      fog.className = 'fog-layer';
+      fog.style.top = (10 + i * 18) + '%';
+      fog.style.width = (120 + Math.random() * 80) + '%';
+      fog.style.animationDuration = (8 + Math.random() * 6) + 's';
+      fog.style.animationDelay = (Math.random() * 4) + 's';
+      layer.appendChild(fog);
+    }
+  }
+
+  else if (type === 'night') {
+    const moon = document.createElement('div');
+    moon.className = 'moon';
+    layer.appendChild(moon);
+    for (let i = 0; i < 60; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = (Math.random() * 100) + '%';
+      star.style.top = (Math.random() * 70) + '%';
+      star.style.animationDuration = (2 + Math.random() * 4) + 's';
+      star.style.animationDelay = (Math.random() * 4) + 's';
+      const sz = Math.random() < 0.2 ? 3 : 2;
+      star.style.width = sz + 'px'; star.style.height = sz + 'px';
+      layer.appendChild(star);
+    }
+  }
 }
 
-/* ===== QUICK LINKS ===== */
-.quick-links {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.quick-card {
-  border-radius: 16px;
-  padding: 14px 12px;
-  display: flex; flex-direction: column; gap: 4px;
-  border: 1px solid rgba(255,255,255,0.1);
-  backdrop-filter: blur(12px);
-  transition: transform 0.15s, background 0.15s;
-  cursor: pointer;
-}
-.quick-card:hover { transform: scale(1.02); }
-.quick-card.meals { background: rgba(234,88,12,0.25); }
-.quick-card.shopping { background: rgba(5,150,105,0.25); }
-.quick-card.todos { background: rgba(99,102,241,0.25); }
-.qc-icon { font-size: 22px; }
-.qc-label { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; }
-.qc-sub { font-size: 11px; color: rgba(255,255,255,0.6); }
-
-/* ===== TICKER BAR ===== */
-.ticker-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 50;
-  height: 44px;
-  background: rgba(10,10,30,0.92);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center;
-  overflow: hidden;
-}
-.ticker-label {
-  padding: 0 12px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  color: #818cf8;
-  flex-shrink: 0;
-  border-right: 1px solid rgba(255,255,255,0.1);
-  height: 100%;
-  display: flex; align-items: center;
-}
-.ticker-track { flex: 1; overflow: hidden; height: 100%; position: relative; }
-.ticker-inner {
-  display: flex; align-items: center; gap: 0;
-  position: absolute;
-  white-space: nowrap;
-  height: 100%;
-  animation: ticker-scroll 30s linear infinite;
-}
-.ticker-inner:hover { animation-play-state: paused; }
-@keyframes ticker-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.ticker-item {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 0 20px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.8);
-  flex-shrink: 0;
-}
-.ticker-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ticker-sep {
-  display: inline-block;
-  color: rgba(255,255,255,0.2);
-  padding: 0 6px;
-  font-size: 16px;
+function addClouds(layer, count, opacity) {
+  for (let i = 0; i < count; i++) {
+    const cloud = document.createElement('div');
+    cloud.className = 'cloud';
+    const w = 150 + Math.random() * 200;
+    const h = 50 + Math.random() * 60;
+    cloud.style.width = w + 'px';
+    cloud.style.height = h + 'px';
+    cloud.style.top = (5 + Math.random() * 30) + '%';
+    cloud.style.opacity = opacity;
+    const dur = 25 + Math.random() * 40;
+    cloud.style.animationDuration = dur + 's';
+    cloud.style.animationDelay = -(Math.random() * dur) + 's';
+    layer.appendChild(cloud);
+  }
 }
 
-/* ===== MODALS ===== */
-.modal-overlay {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  z-index: 99;
-}
-.modal-overlay.open { display: block; }
-.modal {
-  position: fixed;
-  bottom: -100%;
-  left: 0; right: 0;
-  background: #1e293b;
-  border-radius: 24px 24px 0 0;
-  border-top: 1px solid rgba(255,255,255,0.15);
-  z-index: 100;
-  transition: bottom 0.3s cubic-bezier(0.34,1.56,0.64,1);
-  padding-bottom: env(safe-area-inset-bottom, 16px);
-}
-.modal.open { bottom: 0; }
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.modal-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 17px; }
-.modal-close {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  color: white; font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
-}
-.modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
-.modal-footer {
-  display: flex; gap: 10px;
-  padding: 12px 20px 16px;
-  border-top: 1px solid rgba(255,255,255,0.1);
-}
-.form-input {
-  width: 100%;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
-  padding: 10px 14px;
-  color: white;
-  font-family: 'Nunito Sans', sans-serif;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.form-input:focus { border-color: #6366f1; }
-.form-input option { background: #1e293b; }
-.form-row { display: flex; gap: 8px; }
-.form-row .form-input { flex: 1; }
-.btn-cancel {
-  flex: 1; padding: 12px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
-  font-size: 14px; font-weight: 600;
-  font-family: inherit;
-}
-.btn-save {
-  flex: 2; padding: 12px;
-  border-radius: 12px;
-  background: #6366f1;
-  color: white;
-  font-size: 14px; font-weight: 700;
-  font-family: 'Nunito', sans-serif;
-  transition: background 0.15s;
-}
-.btn-save:hover { background: #4f46e5; }
-
-/* ===== INNER PAGE NAV ===== */
-.page-header {
-  position: relative; z-index: 10;
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px;
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.back-btn {
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.12);
-  color: white; font-size: 20px;
-  display: flex; align-items: center; justify-content: center;
-}
-.page-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 18px; }
-
-/* ===== SHARED LIST STYLES ===== */
-.list-section {
-  position: relative; z-index: 10;
-  padding: 12px;
-  flex: 1;
-  overflow-y: auto;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.list-card {
-  background: rgba(15,23,42,0.8);
-  backdrop-filter: blur(16px);
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.1);
-  overflow: hidden;
-}
-.list-card-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.list-card-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; }
-.list-items { padding: 6px 8px; }
-.list-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 8px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.list-item:hover { background: rgba(255,255,255,0.06); }
-.list-check {
-  width: 22px; height: 22px;
-  border-radius: 6px;
-  border: 2px solid rgba(255,255,255,0.25);
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-.list-item.checked .list-check {
-  background: #6366f1;
-  border-color: #6366f1;
-}
-.list-item.checked .list-item-text {
-  text-decoration: line-through;
-  color: rgba(255,255,255,0.35);
-}
-.list-item-text { font-size: 14px; flex: 1; }
-.add-item-row {
-  display: flex; gap: 8px;
-  padding: 8px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-.add-item-input {
-  flex: 1;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 8px 12px;
-  color: white;
-  font-family: inherit;
-  font-size: 13px;
-  outline: none;
-}
-.add-item-btn {
-  width: 36px; height: 36px;
-  border-radius: 10px;
-  background: #6366f1;
-  color: white;
-  font-size: 20px;
-  display: flex; align-items: center; justify-content: center;
+function addRain(layer, count) {
+  for (let i = 0; i < count; i++) {
+    const drop = document.createElement('div');
+    drop.className = 'raindrop';
+    drop.style.left = (Math.random() * 110) + '%';
+    drop.style.height = (15 + Math.random() * 30) + 'px';
+    drop.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+    drop.style.animationDelay = -(Math.random() * 2) + 's';
+    drop.style.opacity = 0.4 + Math.random() * 0.4;
+    layer.appendChild(drop);
+  }
 }
 
-/* ===== MEAL PLANNER ===== */
-.meal-grid {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 8px;
+function addSnow(layer, count) {
+  const flakes = ['❄', '❅', '❆', '*', '·'];
+  for (let i = 0; i < count; i++) {
+    const flake = document.createElement('div');
+    flake.className = 'snowflake' + (Math.random() < 0.2 ? ' large' : Math.random() < 0.3 ? ' small' : '');
+    flake.textContent = flakes[Math.floor(Math.random() * flakes.length)];
+    flake.style.left = (Math.random() * 100) + '%';
+    flake.style.animationDuration = (3 + Math.random() * 5) + 's';
+    flake.style.animationDelay = -(Math.random() * 6) + 's';
+    layer.appendChild(flake);
+  }
 }
-.meal-day-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 10px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.meal-day-row:hover { background: rgba(255,255,255,0.09); }
-.meal-day-row.today-row { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); }
-.meal-day-name { font-weight: 700; font-size: 13px; min-width: 36px; color: rgba(255,255,255,0.6); }
-.meal-day-row.today-row .meal-day-name { color: #a5b4fc; }
-.meal-name { font-size: 14px; font-weight: 600; flex: 1; }
-.meal-empty { font-size: 13px; color: rgba(255,255,255,0.3); flex: 1; }
-.meal-edit-btn { font-size: 13px; color: rgba(255,255,255,0.3); padding: 4px 8px; }
 
-/* ===== RESPONSIVE ===== */
-@media (min-width: 600px) {
-  .main-content { max-width: 600px; margin: 0 auto; }
-  .app-header { max-width: 100%; }
-  body { background: #0a0a1a; }
-}
+// Init
+fetchWeather();
+// Refresh every 15 min
+setInterval(fetchWeather, 15 * 60 * 1000);

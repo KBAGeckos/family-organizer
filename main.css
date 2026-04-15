@@ -1,54 +1,543 @@
-# FamCal – Family Organizer
-## Deploying to Cloudflare Pages
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: #0f172a;
+  color: #f1f5f9;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  padding-bottom: 56px;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
 
-### Step 1: Get the files
-Download the zip file Claude provided and unzip it. You'll see:
-- index.html
-- manifest.json
-- css/ (main.css, weather.css)
-- js/ (data.js, weather.js, calendar.js, app.js)
-- pages/ (shopping.html, todos.html, meals.html)
+/* ===== WEATHER BG ===== */
+.weather-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  transition: background 2s ease;
+}
+.weather-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 100%);
+}
 
-### Step 2: Create a GitHub repo (free)
-1. Go to https://github.com and sign in (or create account)
-2. Click the "+" → "New repository"
-3. Name it "famcal", set to Public, click Create
-4. Upload ALL the files (drag and drop works)
+/* ===== HEADER ===== */
+.app-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.family-badge {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.family-name { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 17px; line-height: 1.2; }
+.header-date { font-size: 12px; color: rgba(255,255,255,0.65); }
+.header-right { display: flex; gap: 4px; }
+.nav-icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  transition: background 0.15s;
+  color: white;
+  text-decoration: none;
+}
+.nav-icon-btn:hover { background: rgba(255,255,255,0.22); }
 
-### Step 3: Deploy on Cloudflare Pages
-1. Go to https://dash.cloudflare.com
-2. Click "Pages" in the left sidebar
-3. Click "Create a project" → "Connect to Git"
-4. Connect your GitHub account
-5. Select your "famcal" repo
-6. Leave all settings as default (no build command needed)
-7. Click "Save and Deploy"
+/* ===== WEATHER STRIP ===== */
+.weather-strip {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.weather-strip::-webkit-scrollbar { display: none; }
+.weather-current {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+  padding-right: 16px;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.w-icon { font-size: 28px; }
+.w-temp { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 24px; }
+.w-desc { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.3; }
+.w-loc { font-size: 11px; color: rgba(255,255,255,0.5); }
+.forecast-row { display: flex; gap: 8px; flex-shrink: 0; }
+.forecast-day {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  min-width: 52px;
+  font-size: 11px;
+}
+.forecast-day .fd-name { font-weight: 600; color: rgba(255,255,255,0.8); }
+.forecast-day .fd-icon { font-size: 18px; }
+.forecast-day .fd-hi { font-weight: 700; font-size: 13px; }
+.forecast-day .fd-lo { color: rgba(255,255,255,0.5); }
 
-That's it! Cloudflare gives you a free URL like:
-  https://famcal.pages.dev
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  position: relative; z-index: 10;
+  flex: 1;
+  padding: 12px 12px 8px;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+}
 
-### Step 4: Add to phone home screen
-**iPhone:** Open in Safari → Share → "Add to Home Screen"
-**Android:** Open in Chrome → Menu → "Add to Home Screen"
+/* ===== MEMBER FILTER ===== */
+.member-filter {
+  display: flex; gap: 6px;
+  overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.member-filter::-webkit-scrollbar { display: none; }
+.member-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px 5px 5px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.12);
+  border: 1.5px solid transparent;
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.75);
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.member-btn.active {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(255,255,255,0.4);
+  color: white;
+}
+.mbtn-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
 
-It will look and feel like a real app!
+/* ===== CALENDAR CARD ===== */
+.calendar-card {
+  background: rgba(15,23,42,0.75);
+  backdrop-filter: blur(16px);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.cal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.cal-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px; }
+.cal-nav {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+  color: white; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.cal-nav:hover { background: rgba(255,255,255,0.2); }
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+.cal-day-header {
+  text-align: center;
+  padding: 8px 2px 6px;
+  font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.05em;
+}
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 4px 2px 2px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.12s;
+  position: relative;
+  min-height: 44px;
+  overflow: hidden;
+}
+.cal-cell:hover { background: rgba(255,255,255,0.1); }
+.cal-cell.other-month .cal-num { color: rgba(255,255,255,0.2); }
+.cal-cell.today .cal-num {
+  background: #6366f1;
+  color: white;
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-num {
+  font-size: 12px; font-weight: 600;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-dots {
+  display: flex; gap: 2px; flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 2px;
+  max-width: 28px;
+}
+.cal-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cal-cell.has-events::after {
+  content: '';
+  display: none;
+}
 
-### Customizing Family Members
-Open js/data.js and edit the FAMILY_MEMBERS array:
-- Change name, initials, color for each person
-- The 6 slots are: Mom, Dad, Child 1, Child 2, Child 3, Family
+/* ===== AGENDA CARD ===== */
+.agenda-card {
+  background: rgba(15,23,42,0.75);
+  backdrop-filter: blur(16px);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.agenda-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.agenda-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; }
+.agenda-add {
+  font-size: 12px; font-weight: 600;
+  color: #818cf8;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(99,102,241,0.15);
+  transition: background 0.15s;
+}
+.agenda-add:hover { background: rgba(99,102,241,0.3); }
+#agenda-list { padding: 8px; }
+.no-events {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+  padding: 16px;
+}
+.agenda-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  background: rgba(255,255,255,0.05);
+  transition: background 0.12s;
+  cursor: pointer;
+}
+.agenda-item:hover { background: rgba(255,255,255,0.1); }
+.agenda-color-bar {
+  width: 4px; height: 36px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.agenda-item-info { flex: 1; min-width: 0; }
+.agenda-item-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-item-meta { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.agenda-item-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
 
-### Features
-- 📅 Shared color-coded calendar
-- 🌤️ Live weather with animated backgrounds for Moore, SC
-- 🎬 Scrolling upcoming events ticker
-- 🍽️ Weekly meal planner
-- 🛒 Family shopping list
-- ✅ To-do & chores by family member
-- 📱 Works as an app on phone (Add to Home Screen)
-- 💾 All data saves locally on each device
+/* ===== QUICK LINKS ===== */
+.quick-links {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.quick-card {
+  border-radius: 16px;
+  padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  transition: transform 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.quick-card:hover { transform: scale(1.02); }
+.quick-card.meals { background: rgba(234,88,12,0.25); }
+.quick-card.shopping { background: rgba(5,150,105,0.25); }
+.quick-card.todos { background: rgba(99,102,241,0.25); }
+.qc-icon { font-size: 22px; }
+.qc-label { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; }
+.qc-sub { font-size: 11px; color: rgba(255,255,255,0.6); }
 
-### Notes
-- Weather updates every 15 minutes using Open-Meteo (free, no account needed)
-- Data is stored in the browser — each device keeps its own copy
-- For shared data across devices, a future upgrade would use Supabase
+/* ===== TICKER BAR ===== */
+.ticker-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  height: 44px;
+  background: rgba(10,10,30,0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center;
+  overflow: hidden;
+}
+.ticker-label {
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #818cf8;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  height: 100%;
+  display: flex; align-items: center;
+}
+.ticker-track { flex: 1; overflow: hidden; height: 100%; position: relative; }
+.ticker-inner {
+  display: flex; align-items: center; gap: 0;
+  position: absolute;
+  white-space: nowrap;
+  height: 100%;
+  animation: ticker-scroll 30s linear infinite;
+}
+.ticker-inner:hover { animation-play-state: paused; }
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 20px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  flex-shrink: 0;
+}
+.ticker-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ticker-sep {
+  display: inline-block;
+  color: rgba(255,255,255,0.2);
+  padding: 0 6px;
+  font-size: 16px;
+}
+
+/* ===== MODALS ===== */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 99;
+}
+.modal-overlay.open { display: block; }
+.modal {
+  position: fixed;
+  bottom: -100%;
+  left: 0; right: 0;
+  background: #1e293b;
+  border-radius: 24px 24px 0 0;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  z-index: 100;
+  transition: bottom 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+.modal.open { bottom: 0; }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.modal-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 17px; }
+.modal-close {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  color: white; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.modal-footer {
+  display: flex; gap: 10px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.form-input {
+  width: 100%;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: white;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: #6366f1; }
+.form-input option { background: #1e293b; }
+.form-row { display: flex; gap: 8px; }
+.form-row .form-input { flex: 1; }
+.btn-cancel {
+  flex: 1; padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  font-size: 14px; font-weight: 600;
+  font-family: inherit;
+}
+.btn-save {
+  flex: 2; padding: 12px;
+  border-radius: 12px;
+  background: #6366f1;
+  color: white;
+  font-size: 14px; font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  transition: background 0.15s;
+}
+.btn-save:hover { background: #4f46e5; }
+
+/* ===== INNER PAGE NAV ===== */
+.page-header {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.back-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+  color: white; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+.page-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 18px; }
+
+/* ===== SHARED LIST STYLES ===== */
+.list-section {
+  position: relative; z-index: 10;
+  padding: 12px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.list-card {
+  background: rgba(15,23,42,0.8);
+  backdrop-filter: blur(16px);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.list-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.list-card-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; }
+.list-items { padding: 6px 8px; }
+.list-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.list-item:hover { background: rgba(255,255,255,0.06); }
+.list-check {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.25);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.list-item.checked .list-check {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+.list-item.checked .list-item-text {
+  text-decoration: line-through;
+  color: rgba(255,255,255,0.35);
+}
+.list-item-text { font-size: 14px; flex: 1; }
+.add-item-row {
+  display: flex; gap: 8px;
+  padding: 8px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.add-item-input {
+  flex: 1;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: white;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.add-item-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: #6366f1;
+  color: white;
+  font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ===== MEAL PLANNER ===== */
+.meal-grid {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px;
+}
+.meal-day-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.meal-day-row:hover { background: rgba(255,255,255,0.09); }
+.meal-day-row.today-row { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); }
+.meal-day-name { font-weight: 700; font-size: 13px; min-width: 36px; color: rgba(255,255,255,0.6); }
+.meal-day-row.today-row .meal-day-name { color: #a5b4fc; }
+.meal-name { font-size: 14px; font-weight: 600; flex: 1; }
+.meal-empty { font-size: 13px; color: rgba(255,255,255,0.3); flex: 1; }
+.meal-edit-btn { font-size: 13px; color: rgba(255,255,255,0.3); padding: 4px 8px; }
+
+/* ===== RESPONSIVE ===== */
+@media (min-width: 600px) {
+  .main-content { max-width: 600px; margin: 0 auto; }
+  .app-header { max-width: 100%; }
+  body { background: #0a0a1a; }
+}
