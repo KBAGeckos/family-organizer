@@ -184,6 +184,58 @@ const DB = {
       { onConflict: 'family_id,date' }
     );
   },
+
+  // ---- PHOTOS ----
+  async getPhoto(memberId) {
+    const db = getSupabase();
+    if (!db) return AvatarStore.getPhoto(memberId);
+    const { data, error } = await db.from('photos')
+      .select('photo_data')
+      .eq('family_id', FAMILY_ID)
+      .eq('member_id', memberId)
+      .single();
+    if (error || !data) return AvatarStore.getPhoto(memberId); // fallback to local
+    // Cache locally for offline/speed
+    AvatarStore.savePhoto(memberId, data.photo_data);
+    return data.photo_data;
+  },
+
+  async savePhoto(memberId, dataUrl) {
+    const db = getSupabase();
+    // Always save locally first for instant display
+    AvatarStore.savePhoto(memberId, dataUrl);
+    if (!db) return true;
+    const { error } = await db.from('photos').upsert(
+      { family_id: FAMILY_ID, member_id: memberId, photo_data: dataUrl, updated_at: new Date().toISOString() },
+      { onConflict: 'family_id,member_id' }
+    );
+    if (error) { console.warn('savePhoto error:', error); return false; }
+    console.log('✅ Photo saved to Supabase for', memberId);
+    return true;
+  },
+
+  async deletePhoto(memberId) {
+    const db = getSupabase();
+    AvatarStore.deletePhoto(memberId);
+    if (!db) return;
+    await db.from('photos').delete()
+      .eq('family_id', FAMILY_ID)
+      .eq('member_id', memberId);
+  },
+
+  // Load all photos at startup and cache them locally
+  async syncAllPhotos() {
+    const db = getSupabase();
+    if (!db) return;
+    const { data, error } = await db.from('photos')
+      .select('member_id, photo_data')
+      .eq('family_id', FAMILY_ID);
+    if (error || !data) return;
+    data.forEach(row => {
+      AvatarStore.savePhoto(row.member_id, row.photo_data);
+    });
+    console.log(`✅ Synced ${data.length} profile photo(s)`);
+  },
 };
 
 // ===== REALTIME SETUP =====
@@ -191,10 +243,15 @@ const DB = {
 function initRealtime(onUpdate) {
   const db = getSupabase();
   if (!db) return;
-  ['events','shopping','todos','meals'].forEach(table => {
+  ["events","shopping","todos","meals"].forEach(table => {
     subscribeToTable(table, onUpdate);
   });
-  console.log('✅ Realtime sync active');
+  // When any device updates a photo, reload all photos and refresh avatars
+  subscribeToTable("photos", async () => {
+    await DB.syncAllPhotos();
+    onUpdate();
+  });
+  console.log("✅ Realtime sync active");
 }
 
 // ===== CONNECTION STATUS =====

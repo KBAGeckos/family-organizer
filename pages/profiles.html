@@ -93,7 +93,10 @@
 
 <div class="success-toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/supabase-config.js"></script>
 <script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
 <script src="../js/weather.js"></script>
 <script>
 setWeatherBg('partly-cloudy', true);
@@ -266,7 +269,7 @@ function closeCrop() {
   cropMemberId = null;
 }
 
-function saveCrop() {
+async function saveCrop() {
   const img = document.getElementById('crop-img');
   const SIZE = 300;
   const canvas = document.createElement('canvas');
@@ -288,7 +291,7 @@ function saveCrop() {
   );
 
   const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-  const ok = AvatarStore.savePhoto(cropMemberId, dataUrl);
+  const ok = await DB.savePhoto(cropMemberId, dataUrl);
   if (ok) { showToast('✓ Photo saved!'); }
   else { showToast('Storage full — try a smaller image'); }
   closeCrop();
@@ -364,8 +367,8 @@ document.getElementById('crop-zoom').addEventListener('input', e => {
 });
 
 // ===== OTHER ACTIONS =====
-function removePhoto(memberId) {
-  AvatarStore.deletePhoto(memberId);
+async function removePhoto(memberId) {
+  await DB.deletePhoto(memberId);
   showToast('Photo removed');
   renderProfiles();
 }
@@ -389,9 +392,15 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
-const colorOverrides = JSON.parse(localStorage.getItem('fc_color_overrides') || '{}');
+const colorOverrides = JSON.parse(localStorage.getItem("fc_color_overrides") || "{}");
 FAMILY_MEMBERS.forEach(m => { if (colorOverrides[m.id]) m.color = colorOverrides[m.id]; });
-renderProfiles();
+// Sync photos from Supabase then render
+(async () => {
+  await DB.syncAllPhotos();
+  renderProfiles();
+  // Listen for photo changes from other devices
+  initRealtime(() => renderProfiles());
+})();
 </script>
 </body>
 </html>

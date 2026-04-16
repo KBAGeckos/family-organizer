@@ -3,47 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Meals – FamCal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/main.css">
 <link rel="stylesheet" href="../css/weather.css">
 <style>
-  .meal-edit-input {
-    flex: 1;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid #6366f1;
-    border-radius: 10px;
-    padding: 6px 10px;
-    color: white;
-    font-family: inherit;
-    font-size: 13px;
-    outline: none;
-  }
-  .meal-save-btn {
-    padding: 6px 14px;
-    background: #6366f1;
-    color: white;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 700;
-    font-family: inherit;
-  }
-  .week-nav-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-  .week-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; }
-  .week-btn {
-    width: 30px; height: 30px;
-    border-radius: 8px;
-    background: rgba(255,255,255,0.1);
-    color: white; font-size: 16px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .meal-notes-section { padding: 8px; border-top: 1px solid rgba(255,255,255,0.08); }
-  .meal-notes-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); padding: 4px 4px 8px; }
+.meal-edit-input{flex:1;background:rgba(255,255,255,0.08);border:1px solid #6366f1;border-radius:10px;padding:6px 10px;color:white;font-family:inherit;font-size:13px;outline:none}
+.week-nav-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.week-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:#fff}
+.week-btn{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body class="weather-partly-cloudy">
@@ -86,6 +56,7 @@ const DAY_NAMES_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Frid
 
 let weekOffset = 0;
 let editDate = null;
+let cachedMeals = {};
 
 function getWeekDates(offset) {
   const today = new Date();
@@ -99,8 +70,10 @@ function getWeekDates(offset) {
   });
 }
 
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
 async function render() {
-  const meals = await DB.getMeals();
+  cachedMeals = await DB.getMeals();
   const dates = getWeekDates(weekOffset);
   const today = todayStr();
   const startLabel = new Date(dates[0]+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -115,7 +88,7 @@ async function render() {
     <div class="meal-grid">`;
 
   dates.forEach(dateStr => {
-    const meal = meals[dateStr]||"";
+    const meal = cachedMeals[dateStr] || '';
     const d = new Date(dateStr+'T12:00:00');
     const isToday = dateStr === today;
     const dayName = DAY_NAMES_FULL[d.getDay()];
@@ -137,7 +110,7 @@ async function render() {
 function openEdit(dateStr, dayName) {
   editDate = dateStr;
   document.getElementById('meal-modal-title').textContent = dayName + "'s Dinner";
-  document.getElementById('meal-input').value = meals[dateStr]||"" || '';
+  document.getElementById('meal-input').value = cachedMeals[dateStr] || '';
   const ideas = document.getElementById('quick-ideas');
   ideas.innerHTML = MEAL_IDEAS.map(m => `<button onclick="document.getElementById('meal-input').value='${m}'" style="padding:5px 10px;background:rgba(255,255,255,0.08);border-radius:10px;font-size:12px;color:rgba(255,255,255,0.8);border:none;cursor:pointer;font-family:inherit">${m}</button>`).join('');
   document.getElementById('meal-modal').classList.add('open');
@@ -147,10 +120,10 @@ function openEdit(dateStr, dayName) {
 
 async function saveMeal() {
   if (!editDate) return;
-  DB.setMeal(editDate, document.getElementById('meal-input').value.trim());
+  const meal = document.getElementById('meal-input').value.trim();
+  await DB.setMeal(editDate, meal);
   closeEdit();
-  initRealtime(()=>render());
-render();
+  await render();
 }
 
 function closeEdit() {
@@ -163,7 +136,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeEdit();
 });
 
-initRealtime(()=>render());
+initRealtime(() => render());
 render();
 </script>
 </body>

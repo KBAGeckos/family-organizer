@@ -5,6 +5,7 @@ const FAMILY_MEMBERS = [
   { id: 'keagen',  name: 'Keagen', initials: 'KE', color: '#2563eb' },
   { id: 'braylon', name: 'Braylon',initials: 'BR', color: '#7c3aed' },
   { id: 'kailee',  name: 'Kailee', initials: 'KA', color: '#374151' },
+  { id: 'chloe',   name: 'Chloe',  initials: 'CH', color: '#ec4899' },
   { id: 'family',  name: 'Family', initials: 'FA', color: '#6366f1' },
 ];
 

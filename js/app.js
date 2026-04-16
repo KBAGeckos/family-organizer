@@ -32,6 +32,9 @@ async function init() {
 
   document.getElementById('ev-date').value = todayStr();
 
+  // Sync all profile photos from Supabase on startup
+  await DB.syncAllPhotos();
+
   // Start realtime — any change on any device triggers a full refresh
   initRealtime(async () => {
     await renderCalendar();
