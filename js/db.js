@@ -44,18 +44,23 @@ const DB = {
   // ---- EVENTS ----
   async getEvents() {
     const db = getSupabase();
-    if (!db) return Store.getEvents();
-    const { data, error } = await db.from('events').select('*').eq('family_id', FAMILY_ID).order('date');
-    if (error) { console.warn('getEvents error:', error); return Store.getEvents(); }
-    // Mirror to localStorage for offline fallback
-    Store.saveEvents(data.map(r => ({
-      id: r.id, title: r.title, date: r.date, time: r.time,
-      memberId: r.member_id, note: r.note || ''
-    })));
-    return data.map(r => ({
-      id: r.id, title: r.title, date: r.date, time: r.time,
-      memberId: r.member_id, note: r.note || ''
-    }));
+    let localEvents = [];
+    if (!db) {
+      localEvents = Store.getEvents();
+    } else {
+      const { data, error } = await db.from('events').select('*').eq('family_id', FAMILY_ID).order('date');
+      if (error) { console.warn('getEvents error:', error); localEvents = Store.getEvents(); }
+      else {
+        Store.saveEvents(data.map(r => ({ id: r.id, title: r.title, date: r.date, time: r.time, memberId: r.member_id, note: r.note || '' })));
+        localEvents = data.map(r => ({ id: r.id, title: r.title, date: r.date, time: r.time, memberId: r.member_id, note: r.note || '' }));
+      }
+    }
+    // Merge with Google Calendar events if any members are connected
+    let gcalEvents = [];
+    if (typeof getGCalEvents === 'function') {
+      try { gcalEvents = await getGCalEvents(); } catch(e) {}
+    }
+    return [...localEvents, ...gcalEvents];
   },
 
   async addEvent(ev) {

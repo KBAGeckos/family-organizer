@@ -97,9 +97,10 @@
 <script src="../js/supabase-config.js"></script>
 <script src="../js/data.js"></script>
 <script src="../js/db.js"></script>
+<script src="../js/gcal.js"></script>
 <script src="../js/weather.js"></script>
 <script>
-setWeatherBg('partly-cloudy', true);
+fetchWeather();
 
 const COLOR_OPTIONS = [
   '#16a34a','#0d9488','#2563eb','#7c3aed','#374151',
@@ -207,6 +208,33 @@ function renderProfiles() {
       removeBtn.textContent = '✕ Remove';
       removeBtn.onclick = () => removePhoto(m.id);
       actions.appendChild(removeBtn);
+    }
+
+    // Google Calendar connect button
+    if (m.id !== 'family') {
+      const gcalConnected = isGCalConnected(m.id);
+      const gcalEmail = getGCalEmail(m.id);
+      const gcalBtn = document.createElement('button');
+      gcalBtn.className = 'photo-btn';
+      gcalBtn.style.cssText = gcalConnected
+        ? 'background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid rgba(16,185,129,0.3);cursor:pointer;white-space:nowrap'
+        : 'background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;padding:5px 10px;border-radius:10px;border:none;cursor:pointer;white-space:nowrap';
+      gcalBtn.textContent = gcalConnected ? '📅 Connected' : '📅 Link Google Cal';
+      gcalBtn.title = gcalConnected ? (gcalEmail || 'Connected') + ' — tap to disconnect' : 'Connect Google Calendar';
+      gcalBtn.onclick = () => {
+        if (gcalConnected) {
+          if (confirm('Disconnect Google Calendar for ' + m.name + '?')) {
+            disconnectGCal(m.id);
+            renderProfiles();
+          }
+        } else {
+          connectGCal(m.id, (email) => {
+            showToast('✓ Google Calendar connected!');
+            renderProfiles();
+          });
+        }
+      };
+      actions.appendChild(gcalBtn);
     }
 
     card.appendChild(avatarWrap);

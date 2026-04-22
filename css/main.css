@@ -541,3 +541,46 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   .app-header { max-width: 100%; }
   body { background: #0a0a1a; }
 }
+
+/* ===== GOOGLE CALENDAR EVENTS ===== */
+.agenda-item.gcal-event .agenda-color-bar {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--bar-color),
+    var(--bar-color) 3px,
+    transparent 3px,
+    transparent 6px
+  ) !important;
+}
+.gcal-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(66,133,244,0.2);
+  color: #4285f4;
+  margin-left: 4px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+/* ===== DESKTOP HORIZONTAL SCROLL FOR MEMBER FILTER ===== */
+.member-filter {
+  cursor: grab;
+}
+.member-filter:active {
+  cursor: grabbing;
+}
+@media (min-width: 600px) {
+  .member-filter::-webkit-scrollbar {
+    height: 3px;
+  }
+  .member-filter::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+  }
+  .member-filter::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+  }
+}

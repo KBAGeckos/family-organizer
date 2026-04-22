@@ -94,7 +94,7 @@ async function openDayModal(dateStr) {
         <div class="agenda-color-bar" style="background:${m.color}"></div>
         <div class="agenda-item-info">
           <div class="agenda-item-title">${ev.title}</div>
-          <div class="agenda-item-meta">${ev.time ? ev.time + ' · ' : ''}${m.name}${ev.note ? ' · ' + ev.note : ''}</div>
+          <div class="agenda-item-meta">${ev.time ? formatTime(ev.time) + ' · ' : ''}${m.name}${ev.note ? ' · ' + ev.note : ''}</div>
         </div>
         ${avatarHTML(ev.memberId, 28)}
         <button onclick="deleteEventAndRefresh('${ev.id}')" style="font-size:16px;color:rgba(255,255,255,0.3);padding:4px 8px;">✕</button>

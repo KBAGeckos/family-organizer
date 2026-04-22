@@ -143,3 +143,13 @@ function avatarHTML(memberId, size = 26, extraStyle = '') {
   }
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;color:white;flex-shrink:0;${extraStyle}">${m.initials}</div>`;
 }
+
+// ===== TIME FORMATTING =====
+// Converts 24hr "HH:MM" to 12hr "H:MM AM/PM"
+function formatTime(timeStr) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return hour + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+}

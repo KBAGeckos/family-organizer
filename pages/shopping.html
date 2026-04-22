@@ -26,7 +26,7 @@
 <script src="../js/db.js"></script>
 <script src="../js/weather.js"></script>
 <script>
-setWeatherBg('partly-cloudy', true);
+fetchWeather();
 
 async function render() {
   const items = await DB.getShoppingList();

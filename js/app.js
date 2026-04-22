@@ -67,11 +67,11 @@ async function renderTodayAgenda() {
     .sort((a,b) => (a.time||'').localeCompare(b.time||''))
     .map(ev => {
       const m = getMember(ev.memberId);
-      return `<div class="agenda-item" onclick="openDayModal('${ev.date}')">
+      return `<div class="agenda-item ${ev.source==='google'?'gcal-event':''}" onclick="openDayModal('${ev.date}')">
         <div class="agenda-color-bar" style="background:${m.color}"></div>
         <div class="agenda-item-info">
-          <div class="agenda-item-title">${ev.title}</div>
-          <div class="agenda-item-meta">${ev.time ? ev.time : 'All day'} · ${m.name}</div>
+          <div class="agenda-item-title">${ev.title}${ev.source==='google'?'<span class="gcal-badge">GCAL</span>':''}</div>
+          <div class="agenda-item-meta">${ev.time ? formatTime(ev.time) : 'All day'} · ${m.name}</div>
         </div>
         ${avatarHTML(ev.memberId, 28)}
       </div>`;
@@ -94,7 +94,7 @@ async function buildTicker() {
     const label = isToday(ev.date) ? 'Today' : isTomorrow(ev.date) ? 'Tomorrow' : formatDateStr(ev.date);
     return `<div class="ticker-item">
       <div class="ticker-dot" style="background:${m.color}"></div>
-      <strong>${ev.title}</strong> — ${label}${ev.time ? ' at ' + ev.time : ''} · ${m.name}
+      <strong>${ev.title}</strong> — ${label}${ev.time ? ' at ' + formatTime(ev.time) : ''} · ${m.name}
     </div><span class="ticker-sep">·</span>`;
   }).join('');
   inner.innerHTML = items + items;
@@ -162,3 +162,27 @@ document.addEventListener('keydown', e => {
 });
 
 init();
+
+// ===== DESKTOP DRAG SCROLL FOR MEMBER FILTER =====
+(function() {
+  const slider = document.getElementById('member-filter');
+  if (!slider) return;
+  let isDown = false, startX, scrollLeft;
+  slider.addEventListener('mousedown', e => {
+    isDown = true;
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  });
+  window.addEventListener('mouseup', () => { isDown = false; });
+  slider.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    slider.scrollLeft = scrollLeft - (x - startX);
+  });
+  // Mouse wheel horizontal scroll
+  slider.addEventListener('wheel', e => {
+    e.preventDefault();
+    slider.scrollLeft += e.deltaY;
+  }, { passive: false });
+})();
