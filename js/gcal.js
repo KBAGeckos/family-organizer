@@ -2,7 +2,7 @@
 // Read-only pull from each family member's Google Calendar
 // Client ID scoped to this app only — no write access
 
-const GCAL_CLIENT_ID = '255919092848-9j28vgcocoqh6e3bbhf6l9b94ffcuf1d.apps.googleusercontent.com';
+const GCAL_CLIENT_ID = '633199279003-gaugl7eo8cnuhj0563ge5332pbul5d0j.apps.googleusercontent.com';
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 const GCAL_STORAGE_KEY = 'fc_gcal_tokens'; // { memberId: { token, expiry, email } }
 
