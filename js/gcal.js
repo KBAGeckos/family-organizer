@@ -5,7 +5,7 @@
 const GCAL_CLIENT_ID = '633199279003-gaugl7eo8cnuhj0563ge5332pbul5d0j.apps.googleusercontent.com';
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 const GCAL_STORAGE_KEY = 'fc_gcal_tokens';
-const FAMILY_ID = 'scott-family';
+// FAMILY_ID is defined in db.js
 
 // ===== TOKEN STORAGE (device-local, just for fetching) =====
 function getGCalTokens() {
