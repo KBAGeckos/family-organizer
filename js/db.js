@@ -248,7 +248,7 @@ const DB = {
 function initRealtime(onUpdate) {
   const db = getSupabase();
   if (!db) return;
-  ["events","shopping","todos","meals"].forEach(table => {
+  ["events","shopping","todos","meals","gcal_events"].forEach(table => {
     subscribeToTable(table, onUpdate);
   });
   // When any device updates a photo, reload all photos and refresh avatars

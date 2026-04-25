@@ -228,8 +228,8 @@ function renderProfiles() {
             renderProfiles();
           }
         } else {
-          connectGCal(m.id, (email) => {
-            showToast('✓ Google Calendar connected!');
+          connectGCal(m.id, async (email) => {
+            showToast('✓ Google Calendar connected! Events will appear on the calendar.');
             renderProfiles();
           });
         }

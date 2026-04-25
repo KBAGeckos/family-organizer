@@ -62,3 +62,25 @@ alter publication supabase_realtime add table meals;
 
 -- Done!
 select 'Scott Family database ready! 🎉' as status;
+
+-- =============================================
+-- GOOGLE CALENDAR EVENTS TABLE
+-- Run this in Supabase SQL Editor
+-- =============================================
+create table if not exists gcal_events (
+  id text primary key,
+  family_id text not null,
+  member_id text not null,
+  title text not null,
+  date text not null,
+  time text,
+  note text,
+  gcal_link text,
+  updated_at timestamptz default now()
+);
+
+alter table gcal_events enable row level security;
+create policy "Family access - gcal_events" on gcal_events for all using (true) with check (true);
+alter publication supabase_realtime add table gcal_events;
+
+select 'GCal events table ready!' as status;

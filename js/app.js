@@ -35,6 +35,11 @@ async function init() {
   // Sync all profile photos from Supabase on startup
   await DB.syncAllPhotos();
 
+  // Pre-fetch Google Calendar events if any members are connected
+  if (typeof getGCalEvents === "function") {
+    try { await getGCalEvents(true); } catch(e) { console.warn("GCal prefetch error:", e); }
+  }
+
   // Start realtime — any change on any device triggers a full refresh
   initRealtime(async () => {
     await renderCalendar();
