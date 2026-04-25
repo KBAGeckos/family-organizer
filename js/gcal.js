@@ -41,7 +41,9 @@ function _doGCalAuth(memberId, onSuccess) {
     client_id: GCAL_CLIENT_ID,
     scope: GCAL_SCOPE,
     callback: async (response) => {
+      console.log('GCal auth callback fired', response);
       if (response.error) { console.warn('GCal auth error:', response.error); return; }
+      if (!response.access_token) { console.warn('GCal: no access token in response'); return; }
 
       let email = '';
       try {
@@ -50,7 +52,8 @@ function _doGCalAuth(memberId, onSuccess) {
         });
         const p = await r.json();
         email = p.email || '';
-      } catch(e) {}
+        console.log('GCal user email:', email);
+      } catch(e) { console.warn('GCal profile fetch error:', e); }
 
       // Save token locally for this device to use for fetching
       const tokens = getGCalTokens();
@@ -64,7 +67,9 @@ function _doGCalAuth(memberId, onSuccess) {
       console.log(`✅ Google Calendar connected for ${memberId} (${email})`);
 
       // Immediately fetch and push to Supabase so ALL devices see the events
+      console.log('Starting syncGCalToSupabase for', memberId);
       await syncGCalToSupabase(memberId);
+      console.log('syncGCalToSupabase complete for', memberId);
 
       if (onSuccess) onSuccess(email);
     }

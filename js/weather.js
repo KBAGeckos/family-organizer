@@ -55,13 +55,17 @@ function renderWeather(data) {
   const info = WMO_CODES[code] || { desc: 'Clear', icon: '🌤️', type: 'partly-cloudy' };
   const weatherType = (!isDay) ? 'night' : info.type;
 
-  // Current conditions
-  document.getElementById('w-icon').textContent = isDay ? info.icon : '🌙';
-  document.getElementById('w-temp').textContent = Math.round(cur.temperature_2m) + '°F';
-  document.getElementById('w-desc').textContent = info.desc;
+  // Current conditions (only update if elements exist on this page)
+  const wIcon = document.getElementById('w-icon');
+  const wTemp = document.getElementById('w-temp');
+  const wDesc = document.getElementById('w-desc');
+  if (wIcon) wIcon.textContent = isDay ? info.icon : '🌙';
+  if (wTemp) wTemp.textContent = Math.round(cur.temperature_2m) + '°F';
+  if (wDesc) wDesc.textContent = info.desc;
 
-  // 5-day forecast
+  // 5-day forecast (only if element exists)
   const forecastRow = document.getElementById('forecast-row');
+  if (!forecastRow) return;
   forecastRow.innerHTML = '';
   for (let i = 0; i < 5; i++) {
     const dayDate = new Date(daily.time[i] + 'T12:00:00');
