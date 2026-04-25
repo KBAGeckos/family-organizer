@@ -3,7 +3,7 @@
 // their events are saved to Supabase so ALL family devices can see them.
 
 const GCAL_CLIENT_ID = '633199279003-gaugl7eo8cnuhj0563ge5332pbul5d0j.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email';
 const GCAL_STORAGE_KEY = 'fc_gcal_tokens';
 // FAMILY_ID is defined in db.js
 
